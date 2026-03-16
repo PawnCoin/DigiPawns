@@ -1,0 +1,160 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's unique identifier"
+        },
+        "username": {
+          "type": "string",
+          "description": "The user's chosen username"
+        },
+        "avatarNftUrl": {
+          "type": "string",
+          "description": "URL to the user's avatar NFT image"
+        },
+        "walletAddress": {
+          "type": "string",
+          "description": "The user's connected Web3 wallet address"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the profile was created"
+        }
+      },
+      "required": ["uid", "username", "createdAt"]
+    },
+    "NotificationSettings": {
+      "title": "NotificationSettings",
+      "description": "User's notification preferences",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's unique identifier"
+        },
+        "loanDueSoon": {
+          "type": "boolean",
+          "description": "Whether to notify when a loan is due soon"
+        },
+        "repaymentSuccess": {
+          "type": "boolean",
+          "description": "Whether to notify on successful repayment"
+        },
+        "loanDefaulted": {
+          "type": "boolean",
+          "description": "Whether to notify when a loan defaults"
+        }
+      },
+      "required": ["uid", "loanDueSoon", "repaymentSuccess", "loanDefaulted"]
+    },
+    "Loan": {
+      "title": "Loan",
+      "description": "A loan backed by an NFT",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user ID of the borrower"
+        },
+        "nftName": {
+          "type": "string",
+          "description": "Name of the NFT used as collateral"
+        },
+        "nftCollection": {
+          "type": "string",
+          "description": "Collection of the NFT"
+        },
+        "nftImageUrl": {
+          "type": "string",
+          "description": "Image URL of the NFT"
+        },
+        "principal": {
+          "type": "number",
+          "description": "The principal amount of the loan"
+        },
+        "interestRate": {
+          "type": "number",
+          "description": "The interest rate of the loan"
+        },
+        "dueDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The due date of the loan"
+        },
+        "repaymentAmount": {
+          "type": "number",
+          "description": "The total amount to repay"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Active", "Repaid", "Defaulted", "Liquidated"],
+          "description": "The current status of the loan"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp of when the loan was created"
+        }
+      },
+      "required": ["uid", "nftName", "nftCollection", "principal", "interestRate", "dueDate", "repaymentAmount", "status", "createdAt"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "A log of user activity",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user ID associated with the activity"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["loan-created", "loan-repaid", "profile-updated", "loan-liquidated"],
+          "description": "The type of activity"
+        },
+        "description": {
+          "type": "string",
+          "description": "A human-readable description of the activity"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the activity occurred"
+        }
+      },
+      "required": ["uid", "type", "description", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores user profiles"
+    },
+    "/notificationSettings/{userId}": {
+      "schema": {
+        "$ref": "#/entities/NotificationSettings"
+      },
+      "description": "Stores user notification preferences"
+    },
+    "/loans/{loanId}": {
+      "schema": {
+        "$ref": "#/entities/Loan"
+      },
+      "description": "Stores all loans"
+    },
+    "/activities/{activityId}": {
+      "schema": {
+        "$ref": "#/entities/Activity"
+      },
+      "description": "Stores user activity logs"
+    }
+  }
+}
