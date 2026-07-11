@@ -10,6 +10,16 @@ const FALLBACK_LOGOS: Record<string, string> = {
   SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
 };
 
+// Custom token badge component for project-native coins ($PC, $DIG)
+interface CustomBadgeProps { label: string; sub?: string; className?: string; }
+export const CustomTokenBadge: React.FC<CustomBadgeProps> = ({ label, sub, className = 'w-8 h-8' }) => (
+  <div className={`${className} rounded-full flex-shrink-0 flex flex-col items-center justify-center border border-yellow-500/60`}
+    style={{ background: 'linear-gradient(135deg, #6B4A00 0%, #D4A017 40%, #FFF0A0 60%, #C8920E 100%)' }}>
+    <span className="font-black text-brand-dark leading-none" style={{ fontSize: 'clamp(5px, 28%, 10px)' }}>{label}</span>
+    {sub && <span className="font-bold text-brand-dark/70 leading-none" style={{ fontSize: 'clamp(4px, 22%, 8px)' }}>{sub}</span>}
+  </div>
+);
+
 export const CryptoLogo: React.FC<{ ticker: string; className?: string }> = ({ ticker, className = 'w-8 h-8' }) => {
   const [primaryFailed, setPrimaryFailed] = useState(false);
   const [secondaryFailed, setSecondaryFailed] = useState(false);
