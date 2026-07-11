@@ -6,6 +6,7 @@ import FeaturedNfts from '../components/FeaturedNfts';
 import Faq from '../components/Faq';
 import AcceptedCurrencies from '../components/AcceptedCurrencies';
 import NftCategories from '../components/NftCategories';
+import TokenSection from '../components/TokenSection';
 import LoanCalculatorModal from '../components/LoanCalculatorModal';
 import { motion } from 'framer-motion';
 
@@ -23,6 +24,7 @@ const HomePage: React.FC = () => {
                 <HeroSection onCalculatorOpen={() => setIsCalculatorOpen(true)} />
                 <HowItWorks />
                 <AcceptedCurrencies />
+                <TokenSection />
                 <NftCategories />
                 <PawnForm />
                 <FeaturedNfts />
