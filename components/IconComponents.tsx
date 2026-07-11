@@ -1,6 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 type IconProps = { className?: string };
+
+// Real crypto logo from jsDelivr CDN (cryptocurrency-icons package)
+// Falls back to a gold badge for coins not in the package (e.g. PEPE)
+export const CryptoLogo: React.FC<{ ticker: string; className?: string }> = ({ ticker, className = 'w-8 h-8' }) => {
+  const [error, setError] = useState(false);
+  const url = `https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/${ticker.toLowerCase()}.svg`;
+  if (error) {
+    return (
+      <div className={`${className} rounded-full bg-brand-gold/20 border border-brand-gold/40 flex items-center justify-center flex-shrink-0`}>
+        <span className="text-[7px] font-bold text-brand-gold leading-none">{ticker.slice(0, 4)}</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={url}
+      alt={ticker}
+      className={`${className} flex-shrink-0`}
+      onError={() => setError(true)}
+    />
+  );
+};
 
 // Base Icon Wrapper
 const Icon: React.FC<{ children: React.ReactNode; className?: string; viewBox?: string }> = ({ children, className = 'w-6 h-6', viewBox = '0 0 24 24' }) => (

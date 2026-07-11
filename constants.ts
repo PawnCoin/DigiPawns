@@ -1,9 +1,5 @@
-
-
 import React from 'react';
-// FIX: Add missing icon imports for NFT categories.
-import { OpenSeaIcon, MagicEdenIcon, RaribleIcon, BtcIcon, EthIcon, UsdtIcon, UsdcIcon, BnbIcon, SolIcon, XrpIcon, AdaIcon, DogeIcon, AvaxIcon, DotIcon, MaticIcon, ShibIcon, TrxIcon, LinkIcon, PepeIcon, ArtIcon, GamingIcon, CollectiblesIcon, VirtualWorldsIcon, MusicIcon } from './components/IconComponents';
-// FIX: Add NftCategory to type imports.
+import { OpenSeaIcon, MagicEdenIcon, RaribleIcon, ArtIcon, GamingIcon, CollectiblesIcon, VirtualWorldsIcon, MusicIcon, CryptoLogo } from './components/IconComponents';
 import type { NftMarketplace, FaqItem, CryptoCurrency, NftCategory } from './types';
 
 export const NFT_MARKETPLACES: NftMarketplace[] = [
@@ -12,7 +8,6 @@ export const NFT_MARKETPLACES: NftMarketplace[] = [
   { name: 'Rarible', logo: React.createElement(RaribleIcon) },
 ];
 
-// FIX: Define and export the missing NFT_CATEGORIES constant.
 export const NFT_CATEGORIES: NftCategory[] = [
   { name: 'Art', icon: React.createElement(ArtIcon) },
   { name: 'Gaming', icon: React.createElement(GamingIcon) },
@@ -20,7 +15,6 @@ export const NFT_CATEGORIES: NftCategory[] = [
   { name: 'Virtual Worlds', icon: React.createElement(VirtualWorldsIcon) },
   { name: 'Music', icon: React.createElement(MusicIcon) },
 ];
-
 
 export const FAQ_ITEMS: FaqItem[] = [
     {
@@ -41,21 +35,24 @@ export const FAQ_ITEMS: FaqItem[] = [
     }
 ];
 
+// All icons pull from the free cryptocurrency-icons CDN on jsDelivr.
+// Coverage: BTC, ETH, USDT, USDC, BNB, SOL, XRP, ADA, DOGE, AVAX, DOT, MATIC, SHIB, TRX, LINK all present.
+// PEPE is not in that package (launched 2023) — CryptoLogo falls back to a branded gold badge.
 export const ACCEPTED_CURRENCIES: CryptoCurrency[] = [
-  { name: 'Bitcoin', ticker: 'BTC', icon: React.createElement(BtcIcon) },
-  { name: 'Ethereum', ticker: 'ETH', icon: React.createElement(EthIcon) },
-  { name: 'Tether', ticker: 'USDT', icon: React.createElement(UsdtIcon) },
-  { name: 'USD Coin', ticker: 'USDC', icon: React.createElement(UsdcIcon) },
-  { name: 'BNB', ticker: 'BNB', icon: React.createElement(BnbIcon) },
-  { name: 'Solana', ticker: 'SOL', icon: React.createElement(SolIcon) },
-  { name: 'XRP', ticker: 'XRP', icon: React.createElement(XrpIcon) },
-  { name: 'Cardano', ticker: 'ADA', icon: React.createElement(AdaIcon) },
-  { name: 'Pepe', ticker: 'PEPE', icon: React.createElement(PepeIcon) },
-  { name: 'Dogecoin', ticker: 'DOGE', icon: React.createElement(DogeIcon) },
-  { name: 'Avalanche', ticker: 'AVAX', icon: React.createElement(AvaxIcon) },
-  { name: 'Polkadot', ticker: 'DOT', icon: React.createElement(DotIcon) },
-  { name: 'Polygon', ticker: 'MATIC', icon: React.createElement(MaticIcon) },
-  { name: 'Shiba Inu', ticker: 'SHIB', icon: React.createElement(ShibIcon) },
-  { name: 'TRON', ticker: 'TRX', icon: React.createElement(TrxIcon) },
-  { name: 'Chainlink', ticker: 'LINK', icon: React.createElement(LinkIcon) },
+  { name: 'Bitcoin',    ticker: 'BTC',  icon: React.createElement(CryptoLogo, { ticker: 'BTC'  }) },
+  { name: 'Ethereum',   ticker: 'ETH',  icon: React.createElement(CryptoLogo, { ticker: 'ETH'  }) },
+  { name: 'Tether',     ticker: 'USDT', icon: React.createElement(CryptoLogo, { ticker: 'USDT' }) },
+  { name: 'USD Coin',   ticker: 'USDC', icon: React.createElement(CryptoLogo, { ticker: 'USDC' }) },
+  { name: 'BNB',        ticker: 'BNB',  icon: React.createElement(CryptoLogo, { ticker: 'BNB'  }) },
+  { name: 'Solana',     ticker: 'SOL',  icon: React.createElement(CryptoLogo, { ticker: 'SOL'  }) },
+  { name: 'XRP',        ticker: 'XRP',  icon: React.createElement(CryptoLogo, { ticker: 'XRP'  }) },
+  { name: 'Cardano',    ticker: 'ADA',  icon: React.createElement(CryptoLogo, { ticker: 'ADA'  }) },
+  { name: 'Pepe',       ticker: 'PEPE', icon: React.createElement(CryptoLogo, { ticker: 'PEPE' }) },
+  { name: 'Dogecoin',   ticker: 'DOGE', icon: React.createElement(CryptoLogo, { ticker: 'DOGE' }) },
+  { name: 'Avalanche',  ticker: 'AVAX', icon: React.createElement(CryptoLogo, { ticker: 'AVAX' }) },
+  { name: 'Polkadot',   ticker: 'DOT',  icon: React.createElement(CryptoLogo, { ticker: 'DOT'  }) },
+  { name: 'Polygon',    ticker: 'MATIC',icon: React.createElement(CryptoLogo, { ticker: 'MATIC'}) },
+  { name: 'Shiba Inu',  ticker: 'SHIB', icon: React.createElement(CryptoLogo, { ticker: 'SHIB' }) },
+  { name: 'TRON',       ticker: 'TRX',  icon: React.createElement(CryptoLogo, { ticker: 'TRX'  }) },
+  { name: 'Chainlink',  ticker: 'LINK', icon: React.createElement(CryptoLogo, { ticker: 'LINK' }) },
 ];
