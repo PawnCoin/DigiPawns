@@ -1,5 +1,5 @@
 import React from 'react';
-import { OpenSeaIcon, MagicEdenIcon, RaribleIcon, ArtIcon, GamingIcon, CollectiblesIcon, VirtualWorldsIcon, MusicIcon, CryptoLogo, CustomTokenBadge } from './components/IconComponents';
+import { OpenSeaIcon, MagicEdenIcon, RaribleIcon, ArtIcon, GamingIcon, CollectiblesIcon, VirtualWorldsIcon, MusicIcon, CryptoLogo } from './components/IconComponents';
 import type { NftMarketplace, FaqItem, CryptoCurrency, NftCategory } from './types';
 
 export const NFT_MARKETPLACES: NftMarketplace[] = [
@@ -35,13 +35,11 @@ export const FAQ_ITEMS: FaqItem[] = [
     }
 ];
 
-// All icons pull from the free cryptocurrency-icons CDN on jsDelivr.
-// $PC (Pawn Coin) and $DIG (DigiPawns) are custom tokens — using metallic gold badges.
-// When logo image files are available, swap CustomTokenBadge for CryptoLogo with a hosted URL.
+// $PC and $DIG use local logo images served from /public.
 export const ACCEPTED_CURRENCIES: CryptoCurrency[] = [
-  { name: 'DigiPawns',        ticker: 'DIG',     icon: React.createElement(CustomTokenBadge, { label: '$DIG' }) },
-  { name: 'Pawn Coin (ETH)',   ticker: 'PC-ETH',  icon: React.createElement(CustomTokenBadge, { label: '$PC', sub: 'ETH' }) },
-  { name: 'Pawn Coin (SOL)',   ticker: 'PC-SOL',  icon: React.createElement(CustomTokenBadge, { label: '$PC', sub: 'SOL' }) },
+  { name: 'DigiPawns',        ticker: 'DIG',     icon: React.createElement('img', { src: '/dig-logo.png',  alt: '$DIG', className: 'w-8 h-8 rounded-full flex-shrink-0 object-cover' }) },
+  { name: 'Pawn Coin (ETH)',   ticker: 'PC-ETH',  icon: React.createElement('img', { src: '/pc-logo.png',   alt: '$PC',  className: 'w-8 h-8 rounded-full flex-shrink-0 object-cover' }) },
+  { name: 'Pawn Coin (SOL)',   ticker: 'PC-SOL',  icon: React.createElement('img', { src: '/pc-logo.png',   alt: '$PC',  className: 'w-8 h-8 rounded-full flex-shrink-0 object-cover' }) },
   { name: 'Bitcoin',           ticker: 'BTC',     icon: React.createElement(CryptoLogo, { ticker: 'BTC'  }) },
   { name: 'Ethereum',          ticker: 'ETH',     icon: React.createElement(CryptoLogo, { ticker: 'ETH'  }) },
   { name: 'Tether',            ticker: 'USDT',    icon: React.createElement(CryptoLogo, { ticker: 'USDT' }) },
