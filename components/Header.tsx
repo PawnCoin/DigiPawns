@@ -12,24 +12,24 @@ const Header: React.FC = () => {
   const handleScrollClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const href = e.currentTarget.getAttribute('href');
-    
+
     const scrollTo = () => {
-        if (href) {
-            const targetElement = document.querySelector(href);
-            if (targetElement) {
-                const headerOffset = 80;
-                const elementPosition = targetElement.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-                window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
-            }
+      if (href) {
+        const targetElement = document.querySelector(href);
+        if (targetElement) {
+          const headerOffset = 80;
+          const elementPosition = targetElement.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
         }
+      }
     };
 
     if (route !== '/') {
-        navigate('/');
-        setTimeout(scrollTo, 100);
+      navigate('/');
+      setTimeout(scrollTo, 100);
     } else {
-        scrollTo();
+      scrollTo();
     }
   };
 
@@ -37,11 +37,11 @@ const Header: React.FC = () => {
     navigate('/dashboard');
     setIsDropdownOpen(false);
   };
-  
+
   const handleDisconnect = () => {
     disconnectWallet();
     setIsDropdownOpen(false);
-  }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -65,17 +65,17 @@ const Header: React.FC = () => {
           <a href="/"><DigiPawnsFullLogo /></a>
           <nav className="hidden md:flex items-center space-x-8">
             <a href="#how-it-works" onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">How It Works</a>
-            <a href="#appraise" onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Appraise</a>
-            <a href="#categories" onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Categories</a>
-            <a href="#collections" onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Collections</a>
-            <a href="#faq" onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">FAQ</a>
+            <a href="#appraise"     onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Appraise</a>
+            <a href="#categories"   onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Categories</a>
+            <a href="#collections"  onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Collections</a>
+            <a href="#faq"          onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">FAQ</a>
           </nav>
           <div className="relative" ref={dropdownRef}>
             {isConnected ? (
-              <button 
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="bg-brand-navy border border-yellow-900/50 text-white font-mono text-sm py-2 px-4 rounded-lg hover:border-brand-gold/60 transition-all duration-300 flex items-center space-x-2"
-                >
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="bg-brand-navy border border-yellow-900/50 text-white font-mono text-sm py-2 px-4 rounded-lg hover:border-brand-gold/60 transition-all duration-300 flex items-center space-x-2"
+              >
                 {profile.avatarNftUrl ? (
                   <img src={profile.avatarNftUrl} alt="Avatar" className="w-6 h-6 rounded-full" />
                 ) : (
@@ -84,25 +84,19 @@ const Header: React.FC = () => {
                 <span>{walletAddress ? formatAddress(walletAddress) : profile.username}</span>
               </button>
             ) : (
-              <button 
+              <button
                 onClick={connectWallet}
-                className="bg-brand-gold text-brand-dark font-bold py-2 px-6 rounded-lg hover:bg-brand-gold-light transition-all duration-300 shadow-gold-glow transform hover:-translate-y-0.5"
+                className="btn-metallic-gold py-2 px-6 rounded-lg"
               >
                 Sign In
               </button>
             )}
             {isDropdownOpen && isConnected && (
               <div className="absolute right-0 mt-2 w-48 bg-brand-navy border border-yellow-900/40 rounded-lg shadow-lg py-2 z-10">
-                <button
-                  onClick={handleDashboardClick}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-yellow-900/20 hover:text-brand-gold flex items-center space-x-2"
-                >
+                <button onClick={handleDashboardClick} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-yellow-900/20 hover:text-brand-gold flex items-center space-x-2">
                   <span>My Dashboard</span>
                 </button>
-                <button
-                  onClick={handleDisconnect}
-                  className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/50 hover:text-red-300 flex items-center space-x-2"
-                >
+                <button onClick={handleDisconnect} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/50 hover:text-red-300 flex items-center space-x-2">
                   <LogOutIcon className="w-4 h-4" />
                   <span>Sign Out</span>
                 </button>

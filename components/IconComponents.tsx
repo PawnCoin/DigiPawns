@@ -4,22 +4,36 @@ type IconProps = { className?: string };
 
 // Real crypto logo from jsDelivr CDN (cryptocurrency-icons package)
 // Falls back to a gold badge for coins not in the package (e.g. PEPE)
+// Coins missing from cryptocurrency-icons (launched after 2021): map to free CoinGecko CDN URLs
+const FALLBACK_LOGOS: Record<string, string> = {
+  PEPE: 'https://assets.coingecko.com/coins/images/29850/small/pepe-token.jpeg',
+  SHIB: 'https://assets.coingecko.com/coins/images/11939/small/shiba.png',
+};
+
 export const CryptoLogo: React.FC<{ ticker: string; className?: string }> = ({ ticker, className = 'w-8 h-8' }) => {
-  const [error, setError] = useState(false);
-  const url = `https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/${ticker.toLowerCase()}.svg`;
-  if (error) {
+  const [primaryFailed, setPrimaryFailed] = useState(false);
+  const [secondaryFailed, setSecondaryFailed] = useState(false);
+
+  const primaryUrl = `https://cdn.jsdelivr.net/npm/cryptocurrency-icons@0.18.1/svg/color/${ticker.toLowerCase()}.svg`;
+  const fallbackUrl = FALLBACK_LOGOS[ticker.toUpperCase()];
+
+  if (primaryFailed && (!fallbackUrl || secondaryFailed)) {
     return (
       <div className={`${className} rounded-full bg-brand-gold/20 border border-brand-gold/40 flex items-center justify-center flex-shrink-0`}>
         <span className="text-[7px] font-bold text-brand-gold leading-none">{ticker.slice(0, 4)}</span>
       </div>
     );
   }
+
+  const src = primaryFailed && fallbackUrl ? fallbackUrl : primaryUrl;
+  const onErr = primaryFailed ? () => setSecondaryFailed(true) : () => setPrimaryFailed(true);
+
   return (
     <img
-      src={url}
+      src={src}
       alt={ticker}
-      className={`${className} flex-shrink-0`}
-      onError={() => setError(true)}
+      className={`${className} flex-shrink-0 rounded-full`}
+      onError={onErr}
     />
   );
 };
@@ -39,13 +53,18 @@ export const DigiPawnsFullLogo: React.FC = () => (
           <path d="M20 6.66663L33.3333 20L20 33.3333L6.66667 20L20 6.66663Z" fill="url(#paint1_linear_1_2)"/>
           <path d="M20 13.3334L26.6667 20L20 26.6667L13.3333 20L20 13.3334Z" fill="#0B1528"/>
           <defs>
-              <linearGradient id="paint0_linear_1_2" x1="20" y1="0" x2="20" y2="40" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#F0C040"/>
-                  <stop offset="1" stopColor="#B8860B"/>
+              <linearGradient id="paint0_linear_1_2" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%"  stopColor="#6B4A00"/>
+                  <stop offset="30%" stopColor="#D4A017"/>
+                  <stop offset="50%" stopColor="#FFF0A0"/>
+                  <stop offset="70%" stopColor="#D4A017"/>
+                  <stop offset="100%" stopColor="#6B4A00"/>
               </linearGradient>
-              <linearGradient id="paint1_linear_1_2" x1="20" y1="6.66663" x2="20" y2="33.3333" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#FDE68A"/>
-                  <stop offset="1" stopColor="#D4A017"/>
+              <linearGradient id="paint1_linear_1_2" x1="0" y1="6.66663" x2="40" y2="33.3333" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%"  stopColor="#C8920E"/>
+                  <stop offset="40%" stopColor="#F5D060"/>
+                  <stop offset="60%" stopColor="#FFF0A0"/>
+                  <stop offset="100%" stopColor="#C8920E"/>
               </linearGradient>
           </defs>
       </svg>
