@@ -7,15 +7,15 @@ import { fetchNftsForWallet } from '../services/nftService';
 import { formatDistanceToNow } from 'date-fns';
 
 const NftGridItem: React.FC<{ nft: Nft; onAppraise: () => void }> = ({ nft, onAppraise }) => (
-    <div className="bg-gray-900/50 rounded-lg overflow-hidden border border-gray-800 group transition-all duration-300 hover:border-blue-500 hover:shadow-lg">
-        <div className="w-full h-40 bg-gray-700 relative">
+    <div className="bg-brand-dark/60 rounded-lg overflow-hidden border border-yellow-900/30 group transition-all duration-300 hover:border-brand-gold/60 hover:shadow-lg">
+        <div className="w-full h-40 bg-brand-dark relative">
             <img src={nft.imageUrl} alt={nft.name} className="w-full h-full object-cover" />
         </div>
         <div className="p-3">
             <p className="text-xs text-gray-400 truncate">{nft.collection}</p>
             <h4 className="font-semibold text-white truncate">{nft.name}</h4>
         </div>
-        <button onClick={onAppraise} className="w-full bg-brand-blue/80 text-white font-bold text-sm py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <button onClick={onAppraise} className="w-full bg-brand-gold-dark/80 text-white font-bold text-sm py-2 px-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             Quick Appraise
         </button>
     </div>
@@ -24,11 +24,11 @@ const NftGridItem: React.FC<{ nft: Nft; onAppraise: () => void }> = ({ nft, onAp
 const NftGridSkeleton: React.FC = () => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {[...Array(8)].map((_, i) => (
-             <div key={i} className="bg-gray-900/50 rounded-lg overflow-hidden border border-gray-800 animate-pulse">
-                <div className="w-full h-40 bg-gray-700"></div>
+             <div key={i} className="bg-brand-dark/60 rounded-lg overflow-hidden border border-yellow-900/20 animate-pulse">
+                <div className="w-full h-40 bg-brand-navy"></div>
                 <div className="p-3">
-                    <div className="h-2 bg-gray-700 rounded w-3/4 mb-2"></div>
-                    <div className="h-3 bg-gray-700 rounded w-1/2"></div>
+                    <div className="h-2 bg-brand-navy rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-brand-navy rounded w-1/2"></div>
                 </div>
             </div>
         ))}
@@ -146,7 +146,7 @@ const SettingsView: React.FC = () => {
 
     const renderPortfolioContent = () => {
         if (!walletAddress) {
-             return <div className="text-center py-16 bg-brand-gray rounded-lg border border-dashed border-gray-700"><p className="text-gray-400">Please connect your wallet to view your assets.</p></div>
+             return <div className="text-center py-16 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40"><p className="text-gray-400">Please connect your wallet to view your assets.</p></div>
         }
         if (portfolio.isLoading) {
             return <NftGridSkeleton />;
@@ -161,7 +161,7 @@ const SettingsView: React.FC = () => {
         }
         if (portfolio.nfts.length === 0) {
             return (
-                <div className="text-center py-16 bg-brand-gray rounded-lg border border-dashed border-gray-700">
+                <div className="text-center py-16 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40">
                     <p className="text-gray-400">No NFTs found in this wallet.</p>
                     <p className="text-sm text-gray-500 mt-1">(AI-generated for demonstration)</p>
                 </div>
@@ -169,7 +169,7 @@ const SettingsView: React.FC = () => {
         }
         if (filteredNfts.length === 0) {
             return (
-                <div className="text-center py-16 bg-brand-gray rounded-lg border border-dashed border-gray-700">
+                <div className="text-center py-16 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40">
                     <p className="text-gray-400">No assets found matching "{searchTerm}".</p>
                     <p className="text-sm text-gray-500 mt-1">Try a different search term or clear the filter.</p>
                 </div>
@@ -186,22 +186,22 @@ const SettingsView: React.FC = () => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 bg-brand-gray p-6 rounded-lg border border-gray-700 h-fit">
+            <div className="lg:col-span-1 bg-brand-navy p-6 rounded-lg border border-yellow-900/40 h-fit">
                 <h3 className="font-semibold text-lg text-white mb-4">Connected Wallets</h3>
                 <div className="space-y-2">
                     {primaryWallet && (
-                         <button onClick={() => handleSelectWallet(primaryWallet.address)} className={`w-full p-3 rounded-md transition-colors text-left ${selectedWalletAddress === primaryWallet.address ? 'bg-blue-900/70' : 'bg-gray-900/50 hover:bg-gray-800/60'}`}>
+                         <button onClick={() => handleSelectWallet(primaryWallet.address)} className={`w-full p-3 rounded-md transition-colors text-left ${selectedWalletAddress === primaryWallet.address ? 'bg-yellow-900/30' : 'bg-brand-dark/50 hover:bg-brand-dark/80'}`}>
                              <div className="flex items-center justify-between">
                                 <div>
-                                    <span className="font-mono text-sm text-blue-300">{shortenAddress(primaryWallet.address)}</span>
-                                    <span className="ml-3 text-xs bg-blue-500/30 text-blue-200 px-2 py-0.5 rounded-full">Primary</span>
+                                    <span className="font-mono text-sm text-brand-gold">{shortenAddress(primaryWallet.address)}</span>
+                                    <span className="ml-3 text-xs bg-brand-gold/20 text-brand-gold px-2 py-0.5 rounded-full">Primary</span>
                                 </div>
                              </div>
                              <p className="text-xs text-gray-400 mt-1">Last active: {formatDistanceToNow(new Date(primaryWallet.lastActive), { addSuffix: true })}</p>
                         </button>
                     )}
                     {linkedWallets.map(wallet => (
-                        <div key={wallet.address} className={`flex items-center justify-between rounded-md group ${selectedWalletAddress === wallet.address ? 'bg-blue-900/70' : 'bg-gray-900/50 hover:bg-gray-800/60'}`}>
+                        <div key={wallet.address} className={`flex items-center justify-between rounded-md group ${selectedWalletAddress === wallet.address ? 'bg-yellow-900/30' : 'bg-brand-dark/50 hover:bg-brand-dark/80'}`}>
                             <button onClick={() => handleSelectWallet(wallet.address)} className="flex-grow p-3 text-left">
                                 <span className="font-mono text-sm text-gray-400">{shortenAddress(wallet.address)}</span>
                                 <p className="text-xs text-gray-500 mt-1">Last active: {formatDistanceToNow(new Date(wallet.lastActive), { addSuffix: true })}</p>
@@ -212,15 +212,15 @@ const SettingsView: React.FC = () => {
                 </div>
                 {isAddingWallet ? (
                     <div className="mt-4">
-                        <input type="text" value={newWalletAddress} onChange={(e) => { setNewWalletAddress(e.target.value); setAddWalletError(''); }} className="w-full bg-gray-900 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm" placeholder="Enter new wallet address (0x...)" />
+                        <input type="text" value={newWalletAddress} onChange={(e) => { setNewWalletAddress(e.target.value); setAddWalletError(''); }} className="w-full bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-gold/60 font-mono text-sm text-white placeholder-gray-600" placeholder="Enter new wallet address (0x...)" />
                         {addWalletError && <p className="text-red-400 text-xs mt-1">{addWalletError}</p>}
                         <div className="flex justify-end space-x-2 mt-2">
                             <button onClick={() => setIsAddingWallet(false)} className="text-gray-400 text-sm hover:text-white px-3 py-1">Cancel</button>
-                            <button onClick={handleAddWallet} className="bg-blue-600 text-white font-semibold text-sm px-4 py-1.5 rounded-md hover:bg-blue-500">Add</button>
+                            <button onClick={handleAddWallet} className="bg-brand-gold text-brand-dark font-semibold text-sm px-4 py-1.5 rounded-md hover:bg-brand-gold-light">Add</button>
                         </div>
                     </div>
                 ) : (
-                    <button onClick={() => setIsAddingWallet(true)} className="mt-4 w-full flex items-center justify-center space-x-2 text-blue-300 border-2 border-dashed border-gray-600 hover:border-blue-500 hover:bg-brand-blue/10 rounded-lg py-3 transition-colors">
+                    <button onClick={() => setIsAddingWallet(true)} className="mt-4 w-full flex items-center justify-center space-x-2 text-brand-gold border-2 border-dashed border-yellow-900/40 hover:border-brand-gold/60 hover:bg-brand-gold/10 rounded-lg py-3 transition-colors">
                         <PlusIcon className="w-5 h-5" />
                         <span>Link New Wallet</span>
                     </button>
@@ -228,14 +228,14 @@ const SettingsView: React.FC = () => {
             </div>
             <div className="lg:col-span-2">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4">
-                    <h3 className="font-semibold text-lg text-white mb-2 sm:mb-0">Assets in <span className="font-mono text-blue-400">{selectedWalletAddress ? shortenAddress(selectedWalletAddress) : 'No Wallet Selected'}</span></h3>
+                    <h3 className="font-semibold text-lg text-white mb-2 sm:mb-0">Assets in <span className="font-mono text-brand-gold">{selectedWalletAddress ? shortenAddress(selectedWalletAddress) : 'No Wallet Selected'}</span></h3>
                     <div className="w-full sm:w-auto">
                          <input
                             type="text"
                             placeholder="Filter by name or collection..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full sm:w-64 bg-gray-900 border border-gray-700 rounded-lg py-1.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+                            className="w-full sm:w-64 bg-brand-dark border border-yellow-900/40 rounded-lg py-1.5 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/60 transition text-white placeholder-gray-600"
                         />
                     </div>
                 </div>

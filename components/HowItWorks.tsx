@@ -1,12 +1,11 @@
-
 import React from 'react';
 
 const Step: React.FC<{ number: string; title: string; children: React.ReactNode }> = ({ number, title, children }) => (
-  <div className="relative pl-12 pb-8 border-l-2 border-blue-500/30">
-    <div className="absolute -left-5 top-0 w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center font-bold text-white shadow-blue-glow">
+  <div className="relative pl-12 pb-8 border-l-2 border-brand-gold/30">
+    <div className="absolute -left-5 top-0 w-10 h-10 bg-brand-gold-dark rounded-full flex items-center justify-center font-bold text-brand-dark shadow-gold-glow">
       {number}
     </div>
-    <h3 className="text-xl font-bold text-blue-300">{title}</h3>
+    <h3 className="text-xl font-bold text-brand-gold">{title}</h3>
     <p className="mt-2 text-gray-400">{children}</p>
   </div>
 );
@@ -16,7 +15,7 @@ const HowItWorks: React.FC = () => {
     <section id="how-it-works" className="py-20 sm:py-24">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
-          Get a Loan in <span className="text-blue-400">4 Simple Steps</span>
+          Get a Loan in <span className="text-brand-gold">4 Simple Steps</span>
         </h2>
         <div className="space-y-4">
           <Step number="1" title="Submit Your NFT">

@@ -9,21 +9,21 @@ const Icon: React.FC<{ children: React.ReactNode; className?: string; viewBox?: 
   </svg>
 );
 
-// App Logo
+// App Logo — updated to $DIG gold palette
 export const DigiPawnsFullLogo: React.FC = () => (
   <div className="flex items-center space-x-2">
       <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M20 0L40 20L20 40L0 20L20 0Z" fill="url(#paint0_linear_1_2)"/>
           <path d="M20 6.66663L33.3333 20L20 33.3333L6.66667 20L20 6.66663Z" fill="url(#paint1_linear_1_2)"/>
-          <path d="M20 13.3334L26.6667 20L20 26.6667L13.3333 20L20 13.3334Z" fill="#0A0A0A"/>
+          <path d="M20 13.3334L26.6667 20L20 26.6667L13.3333 20L20 13.3334Z" fill="#0B1528"/>
           <defs>
               <linearGradient id="paint0_linear_1_2" x1="20" y1="0" x2="20" y2="40" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#3B82F6"/>
-                  <stop offset="1" stopColor="#1E3A8A"/>
+                  <stop stopColor="#F0C040"/>
+                  <stop offset="1" stopColor="#B8860B"/>
               </linearGradient>
               <linearGradient id="paint1_linear_1_2" x1="20" y1="6.66663" x2="20" y2="33.3333" gradientUnits="userSpaceOnUse">
-                  <stop stopColor="#BFDBFE"/>
-                  <stop offset="1" stopColor="#60A5FA"/>
+                  <stop stopColor="#FDE68A"/>
+                  <stop offset="1" stopColor="#D4A017"/>
               </linearGradient>
           </defs>
       </svg>

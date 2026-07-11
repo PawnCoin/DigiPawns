@@ -35,8 +35,8 @@ const DashboardPage: React.FC = () => {
             onClick={() => setActiveTab(tabId)}
             className={`px-4 py-2 font-semibold rounded-md transition-colors text-sm sm:text-base ${
                 activeTab === tabId
-                    ? 'bg-brand-blue-light text-white'
-                    : 'text-gray-400 hover:bg-brand-gray hover:text-white'
+                    ? 'bg-brand-gold text-brand-dark'
+                    : 'text-gray-400 hover:bg-brand-navy hover:text-white'
             }`}
         >
             {children}
@@ -58,14 +58,14 @@ const DashboardPage: React.FC = () => {
                     </div>
                     <button 
                         onClick={() => setIsCalculatorOpen(true)}
-                        className="mt-4 md:mt-0 bg-brand-gray border border-gray-700 text-gray-300 font-semibold py-2 px-4 rounded-lg hover:bg-gray-800 hover:border-gray-600 transition-all duration-300 flex items-center space-x-2"
+                        className="mt-4 md:mt-0 bg-brand-navy border border-yellow-900/40 text-gray-300 font-semibold py-2 px-4 rounded-lg hover:border-brand-gold/60 hover:text-brand-gold transition-all duration-300 flex items-center space-x-2"
                     >
                         <CalculatorIcon className="w-5 h-5" />
                         <span>Loan Calculator</span>
                     </button>
                 </div>
 
-                <div className="mb-8 border-b border-gray-800">
+                <div className="mb-8 border-b border-yellow-900/30">
                     <nav className="flex space-x-2 sm:space-x-4" aria-label="Tabs">
                         <TabButton tabId="loans">My Loans</TabButton>
                         <TabButton tabId="portfolio">Portfolio & Settings</TabButton>

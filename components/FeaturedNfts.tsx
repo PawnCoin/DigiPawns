@@ -4,17 +4,17 @@ import type { FeaturedNftCategory, FeaturedNftItem } from '../types';
 import { StarIcon } from './IconComponents';
 
 const NftCard: React.FC<{ item: FeaturedNftItem }> = ({ item }) => (
-    <div className="flex-shrink-0 w-64 h-80 bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-5 m-4
-                   hover:border-blue-400/50 hover:scale-105 hover:shadow-blue-glow transition-all duration-300
+    <div className="flex-shrink-0 w-64 h-80 bg-brand-navy/80 backdrop-blur-lg border border-yellow-900/30 rounded-2xl p-5 m-4
+                   hover:border-brand-gold/50 hover:scale-105 hover:shadow-gold-glow transition-all duration-300
                    flex flex-col justify-between">
         <div>
-            <div className="w-full h-40 bg-gray-700/50 rounded-lg mb-4 animate-pulse"></div>
+            <div className="w-full h-40 bg-brand-dark/60 rounded-lg mb-4 animate-pulse"></div>
             <h4 className="font-bold text-lg text-white truncate">{item.name}</h4>
             <p className="text-sm text-gray-400 truncate">{item.collection}</p>
         </div>
         <div>
             <p className="text-xs text-gray-500">Value</p>
-            <p className="font-semibold text-xl text-blue-300">${item.estimatedValue.toLocaleString()}</p>
+            <p className="font-semibold text-xl text-brand-gold">${item.estimatedValue.toLocaleString()}</p>
         </div>
     </div>
 );
@@ -57,14 +57,14 @@ const FeaturedNfts: React.FC = () => {
             <div className="flex w-full overflow-hidden">
                 <div className="flex w-max">
                     {[...Array(6)].map((_, i) => (
-                         <div key={i} className="flex-shrink-0 w-64 h-80 bg-gray-800/80 rounded-2xl p-5 m-4 animate-pulse"></div>
+                         <div key={i} className="flex-shrink-0 w-64 h-80 bg-brand-navy/60 rounded-2xl p-5 m-4 animate-pulse"></div>
                     ))}
                 </div>
             </div>
              <div className="flex w-full overflow-hidden">
                 <div className="flex w-max">
                     {[...Array(6)].map((_, i) => (
-                         <div key={i} className="flex-shrink-0 w-64 h-80 bg-gray-800/80 rounded-2xl p-5 m-4 animate-pulse"></div>
+                         <div key={i} className="flex-shrink-0 w-64 h-80 bg-brand-navy/60 rounded-2xl p-5 m-4 animate-pulse"></div>
                     ))}
                 </div>
             </div>
@@ -76,7 +76,7 @@ const FeaturedNfts: React.FC = () => {
              <div className="absolute inset-0 bg-grid-gray-700/20 [mask-image:linear-gradient(to_bottom,white_5%,transparent_50%)] -z-10"></div>
             <div className="max-w-7xl mx-auto text-center">
                  <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-                    AI-Curated <span className="text-blue-400">Featured Collections</span>
+                    AI-Curated <span className="text-brand-gold">Featured Collections</span>
                 </h2>
                 <p className="text-gray-400 mb-12 max-w-2xl mx-auto">Discover trending and high-value asset collections, dynamically curated by our AI.</p>
             </div>

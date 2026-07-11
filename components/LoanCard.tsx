@@ -16,18 +16,18 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, repayLoan, liquidateLoan }) =
   const [isLiquidateModalOpen, setIsLiquidateModalOpen] = useState(false);
 
   const daysRemaining = differenceInDays(new Date(loan.dueDate), new Date());
-  const totalTerm = 30; // Assuming a 30 day term for progress bar
+  const totalTerm = 30;
   const progress = loan.status === 'Active' ? Math.max(0, (totalTerm - daysRemaining) / totalTerm * 100) : 100;
 
   const statusStyles = {
-    Active: 'bg-blue-500/20 text-blue-300 border-blue-500',
+    Active: 'bg-yellow-500/20 text-yellow-300 border-yellow-500',
     Repaid: 'bg-green-500/20 text-green-300 border-green-500',
     Defaulted: 'bg-red-500/20 text-red-300 border-red-500',
     Liquidated: 'bg-gray-500/20 text-gray-300 border-gray-500',
   };
 
   const statusClass = statusStyles[loan.status] || 'bg-gray-500/20 text-gray-300';
-  const borderClass = loan.status === 'Defaulted' ? 'border-red-700/60 hover:border-red-500/80' : 'border-gray-700 hover:border-blue-500';
+  const borderClass = loan.status === 'Defaulted' ? 'border-red-700/60 hover:border-red-500/80' : 'border-yellow-900/40 hover:border-brand-gold/60';
 
   const handleRepaySuccess = () => {
     repayLoan(loan.id);
@@ -46,10 +46,9 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, repayLoan, liquidateLoan }) =
         animate={{ opacity: 1, scale: 1 }}
         whileHover={{ y: -5 }}
         transition={{ duration: 0.2 }}
-        className={`bg-brand-gray border rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${borderClass} hover:shadow-blue-glow`}
+        className={`bg-brand-navy border rounded-xl overflow-hidden shadow-lg transition-all duration-300 ${borderClass} hover:shadow-gold-glow`}
       >
-        <div className="w-full h-48 bg-gray-800 animate-pulse">
-          {/* In a real app, this would be: <img src={loan.nft.imageUrl} alt={loan.nft.name} className="w-full h-full object-cover" /> */}
+        <div className="w-full h-48 bg-brand-dark/60 animate-pulse">
         </div>
         <div className="p-5">
           <div className="flex justify-between items-start">
@@ -79,8 +78,8 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, repayLoan, liquidateLoan }) =
                 <span>Due In: {daysRemaining >= 0 ? `${daysRemaining} days` : 'Overdue'}</span>
                 <span>{format(new Date(loan.dueDate), 'MMM d, yyyy')}</span>
               </div>
-              <div className="w-full bg-gray-700 rounded-full h-2.5">
-                <div className="bg-blue-500 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+              <div className="w-full bg-brand-dark rounded-full h-2.5">
+                <div className="bg-brand-gold h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
               </div>
             </div>
           )}
@@ -106,7 +105,7 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, repayLoan, liquidateLoan }) =
           {loan.status === 'Active' && (
             <button 
               onClick={() => setIsRepayModalOpen(true)}
-              className="w-full mt-6 bg-brand-blue-light text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-500 transition-all duration-300 shadow-md">
+              className="w-full mt-6 bg-brand-gold text-brand-dark font-bold py-2.5 px-6 rounded-lg hover:bg-brand-gold-light transition-all duration-300 shadow-md">
               Repay Loan
             </button>
           )}

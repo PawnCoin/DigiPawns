@@ -10,7 +10,7 @@ const Toggle: React.FC<{ label: string; enabled: boolean; onChange: (enabled: bo
         <span className="text-gray-300">{label}</span>
         <div className="relative">
             <input type="checkbox" className="sr-only" checked={enabled} onChange={(e) => onChange(e.target.checked)} />
-            <div className={`block w-14 h-8 rounded-full transition ${enabled ? 'bg-blue-500' : 'bg-gray-600'}`}></div>
+            <div className={`block w-14 h-8 rounded-full transition ${enabled ? 'bg-brand-gold' : 'bg-brand-dark'}`}></div>
             <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition transform ${enabled ? 'translate-x-6' : ''}`}></div>
         </div>
     </label>
@@ -25,7 +25,6 @@ const ProfileView: React.FC = () => {
         updateNotificationSettings
     } = useAppContext();
     
-    // Local state for editing, initialized from context
     const [profile, setProfile] = useState<UserProfile>(contextProfile);
     const [notifications, setNotifications] = useState<NotificationSettings>(contextNotifications);
     
@@ -34,7 +33,6 @@ const ProfileView: React.FC = () => {
     const [isAvatarSelectorOpen, setIsAvatarSelectorOpen] = useState(false);
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
 
-    // Sync local state if context changes (e.g., on wallet connect)
     useEffect(() => {
         setProfile(contextProfile);
     }, [contextProfile]);
@@ -73,7 +71,6 @@ const ProfileView: React.FC = () => {
 
     const handleSave = () => {
         setSaveStatus('saving');
-        // Update the global context
         updateProfile(profile);
         updateNotificationSettings(notifications);
         
@@ -89,17 +86,17 @@ const ProfileView: React.FC = () => {
                 <h2 className="text-2xl font-semibold mb-2">My Profile</h2>
                 <p className="text-gray-400 mb-6">Personalize your DigiPawns experience.</p>
             </div>
-            <div className="md:col-span-2 bg-brand-gray p-8 rounded-lg border border-gray-700">
+            <div className="md:col-span-2 bg-brand-navy p-8 rounded-lg border border-yellow-900/40">
                 <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6 mb-8">
                     <div className="relative">
-                        <div className="w-24 h-24 rounded-full bg-gray-900 border-2 border-gray-600 flex items-center justify-center overflow-hidden">
+                        <div className="w-24 h-24 rounded-full bg-brand-dark border-2 border-yellow-900/40 flex items-center justify-center overflow-hidden">
                             {profile.avatarNftUrl ? (
                                 <img src={profile.avatarNftUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
                                 <span className="text-gray-500 text-xs">No Avatar</span>
                             )}
                         </div>
-                        <button onClick={handleAvatarSelectClick} className="absolute -bottom-1 -right-1 bg-blue-500 h-8 w-8 rounded-full flex items-center justify-center text-white hover:bg-blue-400 transition">
+                        <button onClick={handleAvatarSelectClick} className="absolute -bottom-1 -right-1 bg-brand-gold h-8 w-8 rounded-full flex items-center justify-center text-brand-dark hover:bg-brand-gold-light transition">
                            ✏️
                         </button>
                     </div>
@@ -111,7 +108,7 @@ const ProfileView: React.FC = () => {
                                 type="text"
                                 value={profile.username}
                                 onChange={(e) => setProfile(p => ({ ...p, username: e.target.value }))}
-                                className="mt-1 w-full sm:w-64 bg-gray-900 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="mt-1 w-full sm:w-64 bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-gold/60 text-white"
                             />
                         </div>
                         <div>
@@ -122,13 +119,13 @@ const ProfileView: React.FC = () => {
                                 value={profile.walletAddress || ''}
                                 onChange={(e) => setProfile(p => ({ ...p, walletAddress: e.target.value }))}
                                 placeholder="0x..."
-                                className="mt-1 w-full bg-gray-900 border border-gray-600 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                                className="mt-1 w-full bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-gold/60 font-mono text-sm text-white placeholder-gray-600"
                             />
                         </div>
                     </div>
                 </div>
 
-                <hr className="border-gray-700 my-8" />
+                <hr className="border-yellow-900/30 my-8" />
 
                 <h3 className="text-xl font-semibold mb-4">Notification Settings</h3>
                 <div className="space-y-4">
@@ -138,8 +135,8 @@ const ProfileView: React.FC = () => {
                 </div>
                 
                 <div className="mt-8 flex justify-end">
-                    <button onClick={handleSave} disabled={saveStatus === 'saving'} className="bg-brand-blue-light text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-500 transition-all duration-300 disabled:bg-gray-500 flex items-center">
-                        {saveStatus === 'saving' && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
+                    <button onClick={handleSave} disabled={saveStatus === 'saving'} className="bg-brand-gold text-brand-dark font-bold py-2 px-6 rounded-lg hover:bg-brand-gold-light transition-all duration-300 disabled:bg-gray-500 disabled:text-gray-400 flex items-center">
+                        {saveStatus === 'saving' && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-brand-dark" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
                         {saveStatus === 'saved' && <CheckCircleIcon className="w-5 h-5 mr-2" />}
                         {saveStatus === 'saved' ? 'Saved!' : 'Save Changes'}
                     </button>
@@ -148,20 +145,20 @@ const ProfileView: React.FC = () => {
 
             {isAvatarSelectorOpen && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-brand-gray border border-gray-700 rounded-2xl p-6 w-full max-w-2xl">
+                    <div className="bg-brand-navy border border-yellow-900/40 rounded-2xl p-6 w-full max-w-2xl">
                         <h3 className="text-xl font-semibold mb-4">Select Your Avatar NFT</h3>
                         {isLoadingNfts ? (
                             <p className="text-center py-8 text-gray-400">Loading your NFTs...</p>
                         ) : (
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 max-h-96 overflow-y-auto">
                                 {nfts.map(nft => (
-                                    <button key={nft.id} onClick={() => handleSetAvatar(nft)} className="rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 hover:scale-105 transition-transform">
+                                    <button key={nft.id} onClick={() => handleSetAvatar(nft)} className="rounded-lg overflow-hidden border-2 border-transparent hover:border-brand-gold hover:scale-105 transition-transform">
                                         <img src={nft.imageUrl} alt={nft.name} className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>
                         )}
-                        <button onClick={() => setIsAvatarSelectorOpen(false)} className="mt-6 w-full bg-gray-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-gray-500">
+                        <button onClick={() => setIsAvatarSelectorOpen(false)} className="mt-6 w-full bg-brand-dark text-white font-bold py-2.5 px-6 rounded-lg hover:bg-brand-navy border border-yellow-900/40">
                             Cancel
                         </button>
                     </div>

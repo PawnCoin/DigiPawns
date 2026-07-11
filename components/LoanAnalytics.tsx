@@ -6,10 +6,9 @@ interface LoanAnalyticsProps {
   loans: Loan[];
 }
 
-const COLORS = ['#3B82F6', '#10B981', '#EF4444', '#6B7280'];
+const COLORS = ['#D4A017', '#10B981', '#EF4444', '#6B7280'];
 
 const LoanAnalytics: React.FC<LoanAnalyticsProps> = ({ loans }) => {
-  // Calculate status distribution
   const statusCounts = loans.reduce((acc, loan) => {
     acc[loan.status] = (acc[loan.status] || 0) + 1;
     return acc;
@@ -20,7 +19,6 @@ const LoanAnalytics: React.FC<LoanAnalyticsProps> = ({ loans }) => {
     value: statusCounts[status]
   }));
 
-  // Calculate total principal by status
   const principalByStatus = loans.reduce((acc, loan) => {
     acc[loan.status] = (acc[loan.status] || 0) + loan.principal;
     return acc;
@@ -31,7 +29,6 @@ const LoanAnalytics: React.FC<LoanAnalyticsProps> = ({ loans }) => {
     amount: principalByStatus[status]
   }));
 
-  // Total active principal
   const totalActivePrincipal = loans
     .filter(l => l.status === 'Active')
     .reduce((sum, l) => sum + l.principal, 0);
@@ -40,18 +37,17 @@ const LoanAnalytics: React.FC<LoanAnalyticsProps> = ({ loans }) => {
 
   return (
     <div className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Summary Card */}
-      <div className="bg-brand-gray p-6 rounded-xl border border-gray-700 flex flex-col justify-center">
+      <div className="bg-brand-navy p-6 rounded-xl border border-yellow-900/40 flex flex-col justify-center">
         <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider mb-2">Total Active Principal</h3>
         <p className="text-4xl font-bold text-white">${totalActivePrincipal.toLocaleString()}</p>
-        <div className="mt-4 pt-4 border-t border-gray-700">
+        <div className="mt-4 pt-4 border-t border-yellow-900/30">
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-400">Total Loans</span>
             <span className="font-semibold">{loans.length}</span>
           </div>
           <div className="flex justify-between text-sm mb-2">
             <span className="text-gray-400">Active Loans</span>
-            <span className="font-semibold text-blue-400">{statusCounts['Active'] || 0}</span>
+            <span className="font-semibold text-brand-gold">{statusCounts['Active'] || 0}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-400">Repaid Loans</span>
@@ -60,8 +56,7 @@ const LoanAnalytics: React.FC<LoanAnalyticsProps> = ({ loans }) => {
         </div>
       </div>
 
-      {/* Pie Chart */}
-      <div className="bg-brand-gray p-6 rounded-xl border border-gray-700 h-64">
+      <div className="bg-brand-navy p-6 rounded-xl border border-yellow-900/40 h-64">
         <h3 className="text-white font-semibold mb-4">Loan Status Distribution</h3>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -84,7 +79,7 @@ const LoanAnalytics: React.FC<LoanAnalyticsProps> = ({ loans }) => {
               ))}
             </Pie>
             <Tooltip 
-              contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
+              contentStyle={{ backgroundColor: '#0F1E35', borderColor: '#4a3600', color: '#fff' }}
               itemStyle={{ color: '#fff' }}
             />
             <Legend />
@@ -92,17 +87,16 @@ const LoanAnalytics: React.FC<LoanAnalyticsProps> = ({ loans }) => {
         </ResponsiveContainer>
       </div>
 
-      {/* Bar Chart */}
-      <div className="bg-brand-gray p-6 rounded-xl border border-gray-700 h-64">
+      <div className="bg-brand-navy p-6 rounded-xl border border-yellow-900/40 h-64">
         <h3 className="text-white font-semibold mb-4">Principal by Status ($)</h3>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={barData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#1a2e4a" vertical={false} />
             <XAxis dataKey="name" stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} />
             <YAxis stroke="#9CA3AF" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value >= 1000 ? (value / 1000) + 'k' : value}`} />
             <Tooltip 
-              cursor={{ fill: '#374151', opacity: 0.4 }}
-              contentStyle={{ backgroundColor: '#1f2937', borderColor: '#374151', color: '#fff' }}
+              cursor={{ fill: '#1a2e4a', opacity: 0.4 }}
+              contentStyle={{ backgroundColor: '#0F1E35', borderColor: '#4a3600', color: '#fff' }}
               formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']}
             />
             <Bar dataKey="amount" radius={[4, 4, 0, 0]}>

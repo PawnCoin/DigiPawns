@@ -9,13 +9,13 @@ const ActivityIcon: React.FC<{ type: Activity['type'] }> = ({ type }) => {
     const commonClasses = "w-6 h-6";
     switch(type) {
         case 'loan-created':
-            return <PlusCircleIcon className={`${commonClasses} text-blue-400`} />;
+            return <PlusCircleIcon className={`${commonClasses} text-brand-gold`} />;
         case 'loan-repaid':
             return <ArrowUpCircleIcon className={`${commonClasses} text-green-400`} />;
         case 'loan-liquidated':
             return <ArchiveIcon className={`${commonClasses} text-red-400`} />;
         case 'profile-updated':
-            return <UserCircleIcon className={`${commonClasses} text-indigo-400`} />;
+            return <UserCircleIcon className={`${commonClasses} text-amber-400`} />;
         default:
             return <CheckCircleIcon className={`${commonClasses} text-gray-400`} />;
     }
@@ -31,7 +31,7 @@ const ActivityItem: React.FC<{ activity: Activity; index: number }> = ({ activit
             className="flex space-x-4"
         >
             <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-brand-gray flex items-center justify-center border border-gray-700">
+                <div className="w-10 h-10 rounded-full bg-brand-dark flex items-center justify-center border border-yellow-900/40">
                     <ActivityIcon type={activity.type} />
                 </div>
             </div>
@@ -56,7 +56,7 @@ const ActivityView: React.FC = () => {
             </div>
             
             {activityLog.length > 0 ? (
-                <div className="bg-brand-gray p-8 rounded-lg border border-gray-700">
+                <div className="bg-brand-navy p-8 rounded-lg border border-yellow-900/40">
                     <ul className="space-y-6">
                         {activityLog.map((activity, index) => (
                             <ActivityItem key={activity.id} activity={activity} index={index} />
@@ -64,7 +64,7 @@ const ActivityView: React.FC = () => {
                     </ul>
                 </div>
             ) : (
-                <div className="text-center py-20 bg-brand-gray rounded-lg border border-dashed border-gray-700">
+                <div className="text-center py-20 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40">
                     <h3 className="text-xl font-semibold text-gray-300">No Activity Yet</h3>
                     <p className="text-gray-500 mt-2">Take an action like creating a loan or updating your profile to see it here.</p>
                 </div>

@@ -6,7 +6,6 @@ import LoanAnalytics from './LoanAnalytics';
 const LoanView: React.FC = () => {
     const { loans, navigate, repayLoan, liquidateLoan } = useAppContext();
     
-    // Exclude liquidated loans from all views
     const visibleLoans = loans.filter(loan => loan.status !== 'Liquidated');
 
     const activeLoans = visibleLoans.filter(loan => loan.status === 'Active');
@@ -23,10 +22,8 @@ const LoanView: React.FC = () => {
 
     return (
         <div>
-            {/* Analytics Dashboard */}
             <LoanAnalytics loans={visibleLoans} />
 
-            {/* Active Loans */}
             <div>
                 <h2 className="text-2xl font-semibold mb-6">Active Loans ({activeLoans.length})</h2>
                 {activeLoans.length > 0 ? (
@@ -34,14 +31,13 @@ const LoanView: React.FC = () => {
                         {activeLoans.map(loan => <LoanCard key={loan.id} loan={loan} repayLoan={repayLoan} liquidateLoan={liquidateLoan} />)}
                     </div>
                 ) : (
-                    <div className="text-center py-12 bg-brand-gray rounded-lg border border-gray-700">
+                    <div className="text-center py-12 bg-brand-navy rounded-lg border border-yellow-900/30">
                         <p className="text-gray-400">You have no active loans.</p>
-                        <button onClick={handleAppraiseClick} className="text-blue-400 hover:underline mt-2 inline-block">Appraise an NFT to get started</button>
+                        <button onClick={handleAppraiseClick} className="text-brand-gold hover:underline mt-2 inline-block">Appraise an NFT to get started</button>
                     </div>
                 )}
             </div>
 
-            {/* Repaid Loans */}
             <div className="mt-16">
                 <h2 className="text-2xl font-semibold mb-6">Repaid Loans ({repaidLoans.length})</h2>
                 {repaidLoans.length > 0 ? (
@@ -49,13 +45,12 @@ const LoanView: React.FC = () => {
                         {repaidLoans.map(loan => <LoanCard key={loan.id} loan={loan} repayLoan={repayLoan} liquidateLoan={liquidateLoan} />)}
                     </div>
                 ) : (
-                    <div className="text-center py-12 bg-brand-gray rounded-lg border border-gray-700">
+                    <div className="text-center py-12 bg-brand-navy rounded-lg border border-yellow-900/30">
                         <p className="text-gray-400">You have no repaid loan history.</p>
                     </div>
                 )}
             </div>
 
-            {/* Defaulted Loans */}
              {defaultedLoans.length > 0 && (
                 <div className="mt-16">
                     <h2 className="text-2xl font-semibold mb-6 text-red-400">Defaulted Loans ({defaultedLoans.length})</h2>
