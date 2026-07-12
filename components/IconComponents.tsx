@@ -55,31 +55,9 @@ const Icon: React.FC<{ children: React.ReactNode; className?: string; viewBox?: 
   </svg>
 );
 
-// App Logo — updated to $DIG gold palette
-export const DigiPawnsFullLogo: React.FC = () => (
-  <div className="flex items-center space-x-2">
-      <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M20 0L40 20L20 40L0 20L20 0Z" fill="url(#paint0_linear_1_2)"/>
-          <path d="M20 6.66663L33.3333 20L20 33.3333L6.66667 20L20 6.66663Z" fill="url(#paint1_linear_1_2)"/>
-          <path d="M20 13.3334L26.6667 20L20 26.6667L13.3333 20L20 13.3334Z" fill="#0B1528"/>
-          <defs>
-              <linearGradient id="paint0_linear_1_2" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"  stopColor="#6B4A00"/>
-                  <stop offset="30%" stopColor="#D4A017"/>
-                  <stop offset="50%" stopColor="#FFF0A0"/>
-                  <stop offset="70%" stopColor="#D4A017"/>
-                  <stop offset="100%" stopColor="#6B4A00"/>
-              </linearGradient>
-              <linearGradient id="paint1_linear_1_2" x1="0" y1="6.66663" x2="40" y2="33.3333" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%"  stopColor="#C8920E"/>
-                  <stop offset="40%" stopColor="#F5D060"/>
-                  <stop offset="60%" stopColor="#FFF0A0"/>
-                  <stop offset="100%" stopColor="#C8920E"/>
-              </linearGradient>
-          </defs>
-      </svg>
-      <span className="font-bold text-2xl tracking-tight">DigiPawns</span>
-  </div>
+// App Logo — official DigiPawns pixel-art mark (wordmark baked into the image)
+export const DigiPawnsFullLogo: React.FC<{ className?: string }> = ({ className = 'h-16' }) => (
+  <img src="/digipawns-logo.png" alt="DigiPawns" className={`${className} w-auto object-contain`} />
 );
 
 // Generic UI Icons
