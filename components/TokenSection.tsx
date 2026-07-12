@@ -11,6 +11,7 @@ const TOKENS = [
     description: 'The native governance and utility token of DigiPawns. Hold $DIG to access exclusive loan rates, priority appraisals, and platform rewards.',
     discount: '25%',
     tag: 'Native Token',
+    buyUrl: '#',
   },
   {
     name: 'Pawn Coin',
@@ -21,6 +22,7 @@ const TOKENS = [
     description: 'The community-driven payment coin of the DigiPawns ecosystem. Use $PC to settle loans, earn cashback, and unlock VIP pawn tiers.',
     discount: '20%',
     tag: 'Payment Coin',
+    buyUrl: '#',
   },
 ];
 
@@ -133,6 +135,19 @@ const TokenSection: React.FC = () => {
                 </li>
               ))}
             </ul>
+
+            {/* Buy button */}
+            <a
+              href={token.buyUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-metallic-gold w-full text-center py-3 px-6 rounded-xl font-extrabold text-base flex items-center justify-center gap-2 mt-auto"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Buy {token.ticker}
+            </a>
           </motion.div>
         ))}
       </div>
