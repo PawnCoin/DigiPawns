@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
+import ShopPage from './pages/ShopPage';
 import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
@@ -16,6 +17,8 @@ const App: React.FC = () => {
         return <DashboardPage />;
       case '/admin':
         return <AdminPage />;
+      case '/shop':
+        return <ShopPage />;
       case '/':
       default:
         return <HomePage />;

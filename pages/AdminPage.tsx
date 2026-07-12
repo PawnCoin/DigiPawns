@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Collection, Loan, UserProfile } from '../types';
+import type { Collection, Loan, UserProfile, ShopItem } from '../types';
 import { toast } from 'sonner';
 
-type AdminTab = 'users' | 'loans' | 'collections';
+type AdminTab = 'users' | 'loans' | 'collections' | 'shop';
 
 const LOAN_STATUSES = ['Active', 'Repaid', 'Defaulted', 'Liquidated'];
 const TRANSFER_STATUSES = ['awaiting_transfer', 'received', 'active', 'returned', 'liquidated'];
@@ -15,15 +15,23 @@ const emptyCollection = (): Omit<Collection, 'id' | 'createdAt'> => ({
     floorPrice: 0, currency: 'ETH', totalItems: 0, verified: false, website: '',
 });
 
+const emptyShopItem = (): Omit<ShopItem, 'id' | 'listedAt' | 'source'> => ({
+    name: '', collection: '', imageUrl: '', category: 'Art', chain: 'Ethereum', price: 0,
+});
+
 const AdminPage: React.FC = () => {
-    const { isAdmin, navigate, allUsers, allLoans, collections,
+    const { isAdmin, navigate, allUsers, allLoans, collections, shopInventory,
         adminUpdateUser, adminDeleteUser, adminUpdateLoan, adminDeleteLoan,
-        adminAddCollection, adminUpdateCollection, adminDeleteCollection } = useAppContext();
+        adminAddCollection, adminUpdateCollection, adminDeleteCollection,
+        adminAddShopItem, adminUpdateShopItem, adminDeleteShopItem } = useAppContext();
 
     const [tab, setTab] = useState<AdminTab>('users');
     const [collectionForm, setCollectionForm] = useState(emptyCollection());
     const [editingCollection, setEditingCollection] = useState<string | null>(null);
     const [showCollectionForm, setShowCollectionForm] = useState(false);
+    const [shopItemForm, setShopItemForm] = useState(emptyShopItem());
+    const [editingShopItem, setEditingShopItem] = useState<string | null>(null);
+    const [showShopItemForm, setShowShopItemForm] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ type: string; id: string; label: string } | null>(null);
 
     if (!isAdmin) {
@@ -61,12 +69,29 @@ const AdminPage: React.FC = () => {
         } catch { toast.error('Failed to save collection'); }
     };
 
+    const handleShopItemSave = async () => {
+        if (!shopItemForm.name.trim()) { toast.error('Item name is required'); return; }
+        try {
+            if (editingShopItem) {
+                await adminUpdateShopItem(editingShopItem, shopItemForm);
+                toast.success('Item updated');
+            } else {
+                await adminAddShopItem(shopItemForm);
+                toast.success('Item added to the shop floor');
+            }
+            setShopItemForm(emptyShopItem());
+            setEditingShopItem(null);
+            setShowShopItemForm(false);
+        } catch { toast.error('Failed to save item'); }
+    };
+
     const handleDeleteConfirm = async () => {
         if (!confirmDelete) return;
         try {
             if (confirmDelete.type === 'user') await adminDeleteUser(confirmDelete.id);
             else if (confirmDelete.type === 'loan') await adminDeleteLoan(confirmDelete.id);
             else if (confirmDelete.type === 'collection') await adminDeleteCollection(confirmDelete.id);
+            else if (confirmDelete.type === 'shopItem') await adminDeleteShopItem(confirmDelete.id);
             toast.success('Deleted successfully');
         } catch { toast.error('Delete failed'); }
         setConfirmDelete(null);
@@ -89,6 +114,7 @@ const AdminPage: React.FC = () => {
                     <TabBtn id="users" label="Users" count={allUsers.length} />
                     <TabBtn id="loans" label="All Loans" count={allLoans.length} />
                     <TabBtn id="collections" label="Collections" count={collections.length} />
+                    <TabBtn id="shop" label="Shop Floor" count={shopInventory.length} />
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -281,6 +307,75 @@ const AdminPage: React.FC = () => {
                                     ))}
                                     {collections.length === 0 && (
                                         <div className="col-span-3 text-center py-12 text-gray-500">No collections yet. Add one above.</div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── SHOP FLOOR TAB ── */}
+                        {tab === 'shop' && (
+                            <div>
+                                <div className="flex justify-end mb-4">
+                                    <button onClick={() => { setShopItemForm(emptyShopItem()); setEditingShopItem(null); setShowShopItemForm(true); }}
+                                        className="btn-metallic-gold px-5 py-2 rounded-lg font-bold text-sm flex items-center gap-2">
+                                        <span>+</span> Add Item to Shop Floor
+                                    </button>
+                                </div>
+
+                                {showShopItemForm && (
+                                    <div className="mb-6 p-6 rounded-xl border border-brand-gold/30 bg-brand-navy/60">
+                                        <h3 className="font-bold text-white mb-4">{editingShopItem ? 'Edit Item' : 'New Shop Item'}</h3>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            {([['name', 'Item Name', 'text'], ['collection', 'Collection', 'text'], ['imageUrl', 'Image URL', 'text'], ['category', 'Category', 'text'], ['price', 'Price (USD)', 'number']] as [keyof typeof shopItemForm, string, string][]).map(([field, label, type]) => (
+                                                <div key={field}>
+                                                    <label className="block text-xs text-gray-400 mb-1">{label}</label>
+                                                    <input type={type} value={(shopItemForm as any)[field]}
+                                                        onChange={e => setShopItemForm(f => ({ ...f, [field]: type === 'number' ? Number(e.target.value) : e.target.value }))}
+                                                        className="w-full bg-brand-dark border border-yellow-900/40 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-brand-gold/40" />
+                                                </div>
+                                            ))}
+                                            <div>
+                                                <label className="block text-xs text-gray-400 mb-1">Chain</label>
+                                                <select value={shopItemForm.chain} onChange={e => setShopItemForm(f => ({ ...f, chain: e.target.value }))}
+                                                    className="w-full bg-brand-dark border border-yellow-900/40 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-brand-gold/40">
+                                                    {NFT_CHAINS.map(c => <option key={c} value={c}>{c}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-3 mt-4">
+                                            <button onClick={handleShopItemSave} className="btn-metallic-gold px-5 py-2 rounded-lg text-sm font-bold">Save</button>
+                                            <button onClick={() => setShowShopItemForm(false)} className="px-5 py-2 rounded-lg text-sm text-gray-400 hover:text-white border border-yellow-900/30 hover:border-yellow-900/50 transition-colors">Cancel</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {shopInventory.map(item => (
+                                        <div key={item.id} className="bg-brand-navy/60 border border-yellow-900/30 rounded-xl overflow-hidden hover:border-brand-gold/40 transition-colors">
+                                            <div className="h-32 bg-brand-dark/50 relative overflow-hidden">
+                                                {item.imageUrl
+                                                    ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                                                    : <div className="w-full h-full flex items-center justify-center text-gray-600 text-4xl">🖼️</div>}
+                                                <span className="absolute top-2 right-2 bg-brand-gold text-brand-dark text-[10px] font-black px-2 py-0.5 rounded-full">{item.source.replace('-', ' ').toUpperCase()}</span>
+                                            </div>
+                                            <div className="p-4">
+                                                <h4 className="font-bold text-white">{item.name}</h4>
+                                                <p className="text-xs text-gray-400 mt-1 line-clamp-2">{item.collection}</p>
+                                                <div className="flex items-center justify-between mt-3">
+                                                    <span className="text-brand-gold font-semibold text-sm">${item.price.toLocaleString()}</span>
+                                                    <span className="text-gray-500 text-xs">{item.chain}</span>
+                                                </div>
+                                                <div className="flex gap-2 mt-3">
+                                                    <button onClick={() => { setShopItemForm({ name: item.name, collection: item.collection, imageUrl: item.imageUrl, category: item.category || 'Art', chain: item.chain || 'Ethereum', price: item.price }); setEditingShopItem(item.id); setShowShopItemForm(true); }}
+                                                        className="flex-1 text-xs py-1.5 rounded border border-yellow-900/40 text-gray-300 hover:text-brand-gold hover:border-brand-gold/40 transition-colors">Edit</button>
+                                                    <button onClick={() => setConfirmDelete({ type: 'shopItem', id: item.id, label: item.name })}
+                                                        className="flex-1 text-xs py-1.5 rounded border border-red-900/40 text-red-500 hover:bg-red-900/20 transition-colors">Delete</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {shopInventory.length === 0 && (
+                                        <div className="col-span-3 text-center py-12 text-gray-500">No items on the shop floor yet. Add one above, or list a liquidated loan.</div>
                                     )}
                                 </div>
                             </div>

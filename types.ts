@@ -50,6 +50,24 @@ export interface UserProfile {
     bio?: string;
     isAdmin?: boolean;
     createdAt?: string;
+    balance?: number;
+}
+
+export type ShopItemSource = 'liquidated' | 'admin' | 'user-sold' | 'trade-in';
+
+export interface ShopItem {
+    id: string;
+    name: string;
+    collection: string;
+    imageUrl: string;
+    category?: string;
+    chain?: string;
+    price: number;
+    source: ShopItemSource;
+    sellerUid?: string;
+    sellerUsername?: string;
+    originalLoanId?: string;
+    listedAt: string;
 }
 
 export interface NotificationSettings {
@@ -59,7 +77,7 @@ export interface NotificationSettings {
     loanDefaulted: boolean;
 }
 
-export type ActivityType = 'loan-created' | 'loan-repaid' | 'profile-updated' | 'loan-liquidated';
+export type ActivityType = 'loan-created' | 'loan-repaid' | 'profile-updated' | 'loan-liquidated' | 'item-bought' | 'item-sold' | 'item-traded';
 
 export interface Activity {
     id: string;
@@ -166,6 +184,8 @@ export interface AppContextType {
   collections: Collection[];
   allUsers: UserProfile[];
   allLoans: Loan[];
+  shopInventory: ShopItem[];
+  ownedItems: ShopItem[];
 
   // Auth
   navigate: (path: string) => void;
@@ -176,6 +196,14 @@ export interface AppContextType {
   addLoan: (loan: Loan) => void;
   repayLoan: (loanId: string) => void;
   liquidateLoan: (loanId: string) => void;
+
+  // Shop actions
+  buyShopItem: (itemId: string) => Promise<void>;
+  sellNftToShop: (item: { name: string; collection: string; imageUrl: string; category?: string }, price: number) => Promise<void>;
+  tradeInForItem: (shopItemId: string, offeredNft: { name: string; collection: string; imageUrl: string; category?: string }) => Promise<void>;
+  adminAddShopItem: (item: Omit<ShopItem, 'id' | 'listedAt' | 'source'>) => Promise<void>;
+  adminUpdateShopItem: (id: string, data: Partial<ShopItem>) => Promise<void>;
+  adminDeleteShopItem: (id: string) => Promise<void>;
 
   // Profile
   updateProfile: (profile: UserProfile) => void;

@@ -64,6 +64,7 @@ const Header: React.FC = () => {
         <div className="flex items-center justify-between h-20">
           <a href="/"><DigiPawnsFullLogo /></a>
           <nav className="hidden md:flex items-center space-x-8">
+            <button onClick={() => navigate('/shop')} className={`transition-colors duration-200 ${route === '/shop' ? 'text-brand-gold' : 'text-gray-400 hover:text-brand-gold'}`}>Shop Floor</button>
             <a href="#how-it-works" onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">How It Works</a>
             <a href="#appraise"     onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Appraise</a>
             <a href="#categories"   onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Categories</a>
@@ -95,6 +96,9 @@ const Header: React.FC = () => {
               <div className="absolute right-0 mt-2 w-52 bg-brand-navy border border-yellow-900/40 rounded-lg shadow-lg py-2 z-10">
                 <button onClick={handleDashboardClick} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-yellow-900/20 hover:text-brand-gold flex items-center space-x-2">
                   <span>My Dashboard</span>
+                </button>
+                <button onClick={() => { navigate('/shop'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-yellow-900/20 hover:text-brand-gold flex items-center space-x-2">
+                  <span>Shop Floor</span>
                 </button>
                 {isAdmin && (
                   <button onClick={() => { navigate('/admin'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-brand-gold hover:bg-brand-gold/10 flex items-center space-x-2">

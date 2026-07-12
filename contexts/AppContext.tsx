@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
-import type { Loan, AppContextType, UserProfile, NotificationSettings, Activity, ActivityType, Friend, Message, Collection } from '../types';
+import type { Loan, AppContextType, UserProfile, NotificationSettings, Activity, ActivityType, Friend, Message, Collection, ShopItem } from '../types';
 import useRouter from '../hooks/useRouter';
 import { toast } from 'sonner';
 import { auth, db } from '../firebase';
@@ -8,6 +8,8 @@ import {
     collection, doc, setDoc, onSnapshot, query, where,
     deleteDoc, getDocs, limit, addDoc, writeBatch
 } from 'firebase/firestore';
+
+const STARTING_BALANCE = 25000;
 
 declare global {
     interface Window { ethereum?: any; }
@@ -34,6 +36,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [collections, setCollections] = useState<Collection[]>([]);
     const [allUsers, setAllUsers] = useState<UserProfile[]>([]);
     const [allLoans, setAllLoans] = useState<Loan[]>([]);
+    const [shopInventory, setShopInventory] = useState<ShopItem[]>([]);
+    const [ownedItems, setOwnedItems] = useState<ShopItem[]>([]);
 
     // ── Firebase Auth ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -64,6 +68,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return unsub;
     }, []);
 
+    // ── Shop inventory (public, always loaded) ─────────────────────────────────
+    useEffect(() => {
+        const unsub = onSnapshot(collection(db, 'shopInventory'), snap => {
+            const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as ShopItem));
+            setShopInventory(items.sort((a, b) => new Date(b.listedAt || 0).getTime() - new Date(a.listedAt || 0).getTime()));
+        }, console.error);
+        return unsub;
+    }, []);
+
     // ── User-specific Firestore listeners ──────────────────────────────────────
     useEffect(() => {
         if (!isAuthReady || !userId) return;
@@ -83,6 +96,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                     walletAddress: null,
                     isAdmin: false,
                     createdAt: new Date().toISOString(),
+                    balance: STARTING_BALANCE,
                 };
                 setDoc(doc(db, 'users', userId), defaultProfile).catch(console.error);
             }
@@ -139,9 +153,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             });
         }, console.error);
 
+        // Owned items (purchased or traded-in from the shop floor)
+        const ownedUnsub = onSnapshot(query(collection(db, 'ownedItems'), where('uid', '==', userId)), snap => {
+            const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() } as ShopItem & { uid?: string }));
+            setOwnedItems(fetched.sort((a, b) => new Date(b.listedAt || 0).getTime() - new Date(a.listedAt || 0).getTime()));
+        }, console.error);
+
         return () => {
             profileUnsub(); notifUnsub(); loansUnsub(); activityUnsub();
-            friendsUnsub(); msgsInUnsub(); msgsOutUnsub();
+            friendsUnsub(); msgsInUnsub(); msgsOutUnsub(); ownedUnsub();
         };
     }, [isAuthReady, userId]);
 
@@ -225,8 +245,91 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const loan = loans.find(l => l.id === loanId);
         if (!loan) return;
         await setDoc(doc(db, 'loans', loanId), { status: 'Liquidated', nftTransferStatus: 'liquidated' }, { merge: true });
-        logActivity('loan-liquidated', `Collateral for ${loan.nft?.name || loan.nftName} was liquidated.`);
-        if (notificationSettings.loanDefaulted) toast.error(`Loan liquidated.`);
+        // Forfeited collateral goes up for sale on the shop floor, marked up slightly over the loan principal.
+        await addDoc(collection(db, 'shopInventory'), {
+            name: loan.nft?.name || loan.nftName || 'Unnamed NFT',
+            collection: loan.nft?.collection || loan.nftCollection || 'Unknown Collection',
+            imageUrl: loan.nft?.imageUrl || loan.nftImageUrl || '',
+            chain: loan.nftChain || 'Ethereum',
+            price: Math.round((loan.principal || 0) * 1.15),
+            source: 'liquidated',
+            originalLoanId: loanId,
+            listedAt: new Date().toISOString(),
+        });
+        logActivity('loan-liquidated', `Collateral for ${loan.nft?.name || loan.nftName} was liquidated and listed on the shop floor.`);
+        if (notificationSettings.loanDefaulted) toast.error(`Loan liquidated. The NFT is now for sale on the shop floor.`);
+    };
+
+    // ── Shop actions ───────────────────────────────────────────────────────────
+    const buyShopItem = async (itemId: string) => {
+        if (!userId) return;
+        const item = shopInventory.find(i => i.id === itemId);
+        if (!item) { toast.error('That item is no longer available.'); return; }
+        const currentBalance = profile.balance ?? STARTING_BALANCE;
+        if (currentBalance < item.price) { toast.error("You don't have enough store credit for this item."); return; }
+        try {
+            await deleteDoc(doc(db, 'shopInventory', itemId));
+            await addDoc(collection(db, 'ownedItems'), {
+                uid: userId, name: item.name, collection: item.collection, imageUrl: item.imageUrl,
+                category: item.category || '', chain: item.chain || 'Ethereum', price: item.price,
+                source: item.source, listedAt: new Date().toISOString(),
+            });
+            await setDoc(doc(db, 'users', userId), { balance: currentBalance - item.price }, { merge: true });
+            logActivity('item-bought', `Purchased ${item.name} from the shop floor for ${item.price.toLocaleString()}.`);
+            toast.success(`You bought ${item.name}!`);
+        } catch { toast.error('Purchase failed. Please try again.'); }
+    };
+
+    const sellNftToShop = async (nft: { name: string; collection: string; imageUrl: string; category?: string }, price: number) => {
+        if (!userId) return;
+        try {
+            await addDoc(collection(db, 'shopInventory'), {
+                name: nft.name, collection: nft.collection, imageUrl: nft.imageUrl,
+                category: nft.category || '', chain: 'Ethereum', price,
+                source: 'user-sold', sellerUid: userId, sellerUsername: profile.username,
+                listedAt: new Date().toISOString(),
+            });
+            const currentBalance = profile.balance ?? STARTING_BALANCE;
+            await setDoc(doc(db, 'users', userId), { balance: currentBalance + price }, { merge: true });
+            logActivity('item-sold', `Sold ${nft.name} to the shop for ${price.toLocaleString()}.`);
+            toast.success(`Sold ${nft.name} for ${price.toLocaleString()}!`);
+        } catch { toast.error('Sale failed. Please try again.'); }
+    };
+
+    const tradeInForItem = async (shopItemId: string, offeredNft: { name: string; collection: string; imageUrl: string; category?: string }) => {
+        if (!userId) return;
+        const item = shopInventory.find(i => i.id === shopItemId);
+        if (!item) { toast.error('That item is no longer available.'); return; }
+        try {
+            await deleteDoc(doc(db, 'shopInventory', shopItemId));
+            await addDoc(collection(db, 'ownedItems'), {
+                uid: userId, name: item.name, collection: item.collection, imageUrl: item.imageUrl,
+                category: item.category || '', chain: item.chain || 'Ethereum', price: item.price,
+                source: item.source, listedAt: new Date().toISOString(),
+            });
+            // The traded-in NFT becomes new shop floor inventory.
+            await addDoc(collection(db, 'shopInventory'), {
+                name: offeredNft.name, collection: offeredNft.collection, imageUrl: offeredNft.imageUrl,
+                category: offeredNft.category || '', chain: 'Ethereum', price: item.price,
+                source: 'trade-in', sellerUid: userId, sellerUsername: profile.username,
+                listedAt: new Date().toISOString(),
+            });
+            logActivity('item-traded', `Traded ${offeredNft.name} for ${item.name}.`);
+            toast.success(`Trade complete! You now own ${item.name}.`);
+        } catch { toast.error('Trade failed. Please try again.'); }
+    };
+
+    // ── Admin: Shop inventory ──────────────────────────────────────────────────
+    const adminAddShopItem = async (item: Omit<ShopItem, 'id' | 'listedAt' | 'source'>) => {
+        await addDoc(collection(db, 'shopInventory'), { ...item, source: 'admin', listedAt: new Date().toISOString() });
+    };
+
+    const adminUpdateShopItem = async (id: string, data: Partial<ShopItem>) => {
+        await setDoc(doc(db, 'shopInventory', id), data, { merge: true });
+    };
+
+    const adminDeleteShopItem = async (id: string) => {
+        await deleteDoc(doc(db, 'shopInventory', id));
     };
 
     // ── Profile ────────────────────────────────────────────────────────────────
@@ -334,9 +437,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const value: AppContextType = {
         isConnected, isAdmin, userId, walletAddress, loans, profile,
         notificationSettings, activityLog, friends, messages, collections,
-        allUsers, allLoans,
+        allUsers, allLoans, shopInventory, ownedItems,
         navigate, connectWallet, disconnectWallet,
         addLoan, repayLoan, liquidateLoan,
+        buyShopItem, sellNftToShop, tradeInForItem,
+        adminAddShopItem, adminUpdateShopItem, adminDeleteShopItem,
         updateProfile, updateNotificationSettings,
         searchUsers, addFriend, removeFriend, sendMessage, markConversationRead,
         adminUpdateUser, adminDeleteUser, adminUpdateLoan, adminDeleteLoan,
