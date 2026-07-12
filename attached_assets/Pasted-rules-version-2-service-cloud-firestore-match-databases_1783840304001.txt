@@ -1,0 +1,175 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required, immutable) - The user's unique identifier
+    //   - username: string (required) - The user's chosen username
+    //   - avatarNftUrl: string (optional) - URL to the user's avatar NFT image
+    //   - walletAddress: string (optional) - The user's connected Web3 wallet address
+    //   - createdAt: string (required, immutable) - Timestamp of when the profile was created
+    //
+    // Collection: notificationSettings
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required, immutable) - The user's unique identifier
+    //   - loanDueSoon: boolean (required) - Whether to notify when a loan is due soon
+    //   - repaymentSuccess: boolean (required) - Whether to notify on successful repayment
+    //   - loanDefaulted: boolean (required) - Whether to notify when a loan defaults
+    //
+    // Collection: loans
+    // Document ID: {loanId}
+    // Fields:
+    //   - uid: string (required, immutable) - The user ID of the borrower
+    //   - nftName: string (required, immutable) - Name of the NFT used as collateral
+    //   - nftCollection: string (required, immutable) - Collection of the NFT
+    //   - nftImageUrl: string (optional, immutable) - Image URL of the NFT
+    //   - principal: number (required, immutable) - The principal amount of the loan
+    //   - interestRate: number (required, immutable) - The interest rate of the loan
+    //   - dueDate: string (required, immutable) - The due date of the loan
+    //   - repaymentAmount: number (required, immutable) - The total amount to repay
+    //   - status: string (required) - The current status of the loan (Active, Repaid, Defaulted, Liquidated)
+    //   - createdAt: string (required, immutable) - Timestamp of when the loan was created
+    //
+    // Collection: activities
+    // Document ID: {activityId}
+    // Fields:
+    //   - uid: string (required, immutable) - The user ID associated with the activity
+    //   - type: string (required, immutable) - The type of activity
+    //   - description: string (required, immutable) - A human-readable description of the activity
+    //   - timestamp: string (required, immutable) - When the activity occurred
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function isValidStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+             request.resource.data[field].size() >= minLen &&
+             request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string &&
+        dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUserProfile() {
+      return hasOnlyAllowedFields(['uid', 'username', 'avatarNftUrl', 'walletAddress', 'createdAt']) &&
+             isValidStringLength('uid', 1, 128) &&
+             isValidStringLength('username', 1, 50) &&
+             isValidOptionalString('avatarNftUrl', 0, 500) &&
+             isValidOptionalString('walletAddress', 0, 100) &&
+             isValidDateString(request.resource.data.createdAt);
+    }
+
+    function isValidNotificationSettings() {
+      return hasOnlyAllowedFields(['uid', 'loanDueSoon', 'repaymentSuccess', 'loanDefaulted']) &&
+             isValidStringLength('uid', 1, 128) &&
+             request.resource.data.loanDueSoon is bool &&
+             request.resource.data.repaymentSuccess is bool &&
+             request.resource.data.loanDefaulted is bool;
+    }
+
+    function isValidLoan() {
+      return hasOnlyAllowedFields(['uid', 'nftName', 'nftCollection', 'nftImageUrl', 'principal', 'interestRate', 'dueDate', 'repaymentAmount', 'status', 'createdAt']) &&
+             isValidStringLength('uid', 1, 128) &&
+             isValidStringLength('nftName', 1, 100) &&
+             isValidStringLength('nftCollection', 1, 100) &&
+             isValidOptionalString('nftImageUrl', 0, 500) &&
+             request.resource.data.principal is number && request.resource.data.principal > 0 &&
+             request.resource.data.interestRate is number && request.resource.data.interestRate >= 0 &&
+             isValidDateString(request.resource.data.dueDate) &&
+             request.resource.data.repaymentAmount is number && request.resource.data.repaymentAmount > 0 &&
+             request.resource.data.status in ['Active', 'Repaid', 'Defaulted', 'Liquidated'] &&
+             isValidDateString(request.resource.data.createdAt);
+    }
+
+    function isValidActivity() {
+      return hasOnlyAllowedFields(['uid', 'type', 'description', 'timestamp']) &&
+             isValidStringLength('uid', 1, 128) &&
+             request.resource.data.type in ['loan-created', 'loan-repaid', 'profile-updated', 'loan-liquidated'] &&
+             isValidStringLength('description', 1, 500) &&
+             isValidDateString(request.resource.data.timestamp);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUserProfile() && uidUnchanged();
+      allow update: if isOwner(userId) && isValidUserProfile() && uidNotModified() && areImmutableFieldsUnchanged(['createdAt']);
+      allow delete: if false;
+    }
+
+    match /notificationSettings/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidNotificationSettings() && uidUnchanged();
+      allow update: if isOwner(userId) && isValidNotificationSettings() && uidNotModified();
+      allow delete: if false;
+    }
+
+    match /loans/{loanId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidLoan() && uidUnchanged();
+      allow update: if isDocOwner() && isValidLoan() && uidNotModified() && areImmutableFieldsUnchanged(['nftName', 'nftCollection', 'nftImageUrl', 'principal', 'interestRate', 'dueDate', 'repaymentAmount', 'createdAt']);
+      allow delete: if false;
+    }
+
+    match /activities/{activityId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && isValidActivity() && uidUnchanged();
+      allow update: if false; // Activities are immutable
+      allow delete: if false;
+    }
+  }
+}
