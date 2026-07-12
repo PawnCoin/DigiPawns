@@ -14,13 +14,20 @@ DigiPawns is a Vite + React + TypeScript single-page app that simulates an NFT-b
 - Build: `npm run build` → outputs to `dist/` (deployment target is configured as static).
 
 ## Project structure
-- `pages/` — top-level routed pages (Home, Dashboard, Admin, etc.)
-- `components/` — shared UI components
-- `contexts/` — React Context providers (wallet/session, loans, etc.)
+- `pages/` — top-level routed pages (Home, Dashboard, Admin, Shop, etc.)
+- `components/` — shared UI components (`components/shop/` — shop-floor card, sell, and trade-in panels)
+- `contexts/` — React Context providers (wallet/session, loans, shop, etc.)
 - `services/` — Gemini AI calls (`geminiService.ts`), simulated NFT portfolio (`nftService.ts`)
 - `hooks/` — custom hooks
 - `firebase.ts` / `firebase-applet-config.json` — Firebase SDK init
-- `mock-data.ts`, `constants.ts` — fallback/demo data (e.g. placeholder featured collections)
+- `mock-data.ts`, `constants.ts` — fallback/demo data (e.g. placeholder featured collections, placeholder shop items)
+
+## Shop floor (buy / sell / trade)
+- `/shop` is a real pawn-shop floor built on the existing simulated-Web3 model — no real payments. Users have a simulated `balance` (store credit) on their `UserProfile`, starting at $25,000.
+- Liquidating a loan (`liquidateLoan` in `AppContext`) automatically lists the forfeited collateral as a new `shopInventory` Firestore doc (marked up 15% over principal), so defaults feed real shop inventory instead of disappearing.
+- Users can **buy** shop items (deducts balance, moves the item to their `ownedItems`), **sell** an NFT outright to the shop (reuses the Gemini appraisal flow, pays 60% of appraised value as store credit), or **trade in** an owned/described NFT straight-across for a shop item (no cash, item becomes new floor inventory).
+- Admins get a "Shop Floor" tab in `/admin` to manually add/edit/delete listings, same CRUD pattern as the Collections tab.
+- Like other collections, `shopInventory`/`ownedItems` need their Firestore rules (already added to `firestore.rules`) pasted into the Firebase Console to take effect — see task about deploying Firestore rules from Replit.
 
 ## Notes
 - `index.html` still contains a leftover `<script type="importmap">` pointing at `aistudiocdn.com` from the original AI Studio scaffold. It is unused now that the project runs through Vite/npm (Vite resolves imports from `node_modules`), so it's safe to ignore or remove later.
