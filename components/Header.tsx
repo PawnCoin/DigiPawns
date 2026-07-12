@@ -4,7 +4,7 @@ import { useAppContext } from '../contexts/AppContext';
 import useRouter from '../hooks/useRouter';
 
 const Header: React.FC = () => {
-  const { isConnected, walletAddress, profile, connectWallet, disconnectWallet, navigate } = useAppContext();
+  const { isConnected, isAdmin, walletAddress, profile, connectWallet, disconnectWallet, navigate } = useAppContext();
   const { route } = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -92,10 +92,15 @@ const Header: React.FC = () => {
               </button>
             )}
             {isDropdownOpen && isConnected && (
-              <div className="absolute right-0 mt-2 w-48 bg-brand-navy border border-yellow-900/40 rounded-lg shadow-lg py-2 z-10">
+              <div className="absolute right-0 mt-2 w-52 bg-brand-navy border border-yellow-900/40 rounded-lg shadow-lg py-2 z-10">
                 <button onClick={handleDashboardClick} className="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-yellow-900/20 hover:text-brand-gold flex items-center space-x-2">
                   <span>My Dashboard</span>
                 </button>
+                {isAdmin && (
+                  <button onClick={() => { navigate('/admin'); setIsDropdownOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-brand-gold hover:bg-brand-gold/10 flex items-center space-x-2">
+                    <span>⚙️ Admin Panel</span>
+                  </button>
+                )}
                 <button onClick={handleDisconnect} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/50 hover:text-red-300 flex items-center space-x-2">
                   <LogOutIcon className="w-4 h-4" />
                   <span>Sign Out</span>

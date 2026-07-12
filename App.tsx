@@ -4,6 +4,7 @@ import useRouter from './hooks/useRouter';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
+import AdminPage from './pages/AdminPage';
 import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
@@ -13,6 +14,8 @@ const App: React.FC = () => {
     switch (route) {
       case '/dashboard':
         return <DashboardPage />;
+      case '/admin':
+        return <AdminPage />;
       case '/':
       default:
         return <HomePage />;

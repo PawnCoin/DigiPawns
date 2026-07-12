@@ -12,6 +12,7 @@ export interface Nft {
 }
 
 export type LoanStatus = 'Active' | 'Repaid' | 'Defaulted' | 'Liquidated';
+export type NftTransferStatus = 'awaiting_transfer' | 'received' | 'active' | 'returned' | 'liquidated';
 
 export interface Loan {
   id: string;
@@ -19,6 +20,9 @@ export interface Loan {
   nftName?: string;
   nftCollection?: string;
   nftImageUrl?: string;
+  contractAddress?: string;
+  tokenId?: string;
+  nftChain?: string;
   nft: {
     name: string;
     collection: string;
@@ -29,6 +33,7 @@ export interface Loan {
   dueDate: string;
   repaymentAmount: number;
   status: LoanStatus;
+  nftTransferStatus?: NftTransferStatus;
   createdAt?: string;
 }
 
@@ -42,6 +47,8 @@ export interface UserProfile {
     username: string;
     avatarNftUrl: string | null;
     walletAddress?: string | null;
+    bio?: string;
+    isAdmin?: boolean;
     createdAt?: string;
 }
 
@@ -62,6 +69,37 @@ export interface Activity {
     timestamp: string;
 }
 
+export interface Friend {
+    uid: string;
+    username: string;
+    avatarNftUrl: string | null;
+    addedAt: string;
+}
+
+export interface Message {
+    id: string;
+    conversationId: string;
+    fromUid: string;
+    fromUsername: string;
+    toUid: string;
+    text: string;
+    timestamp: string;
+    read: boolean;
+}
+
+export interface Collection {
+    id: string;
+    name: string;
+    description: string;
+    imageUrl: string;
+    chain: string;
+    floorPrice: number;
+    currency: string;
+    totalItems: number;
+    verified: boolean;
+    website?: string;
+    createdAt?: string;
+}
 
 // Component-specific Props
 export interface NftMarketplace {
@@ -84,7 +122,6 @@ export interface NftCategory {
     name: string;
     icon: React.ReactElement;
 }
-
 
 // API & Service Payloads
 export interface NftAppraisal {
@@ -113,24 +150,50 @@ export interface LoanTerms {
     repaymentAmount: number;
 }
 
-
 // Global State (Context)
 export interface AppContextType {
   // State
   isConnected: boolean;
+  isAdmin: boolean;
+  userId: string | null;
   walletAddress: string | null;
   loans: Loan[];
   profile: UserProfile;
   notificationSettings: NotificationSettings;
   activityLog: Activity[];
+  friends: Friend[];
+  messages: Message[];
+  collections: Collection[];
+  allUsers: UserProfile[];
+  allLoans: Loan[];
 
-  // Functions
+  // Auth
   navigate: (path: string) => void;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
+
+  // Loan actions
   addLoan: (loan: Loan) => void;
   repayLoan: (loanId: string) => void;
   liquidateLoan: (loanId: string) => void;
+
+  // Profile
   updateProfile: (profile: UserProfile) => void;
   updateNotificationSettings: (settings: NotificationSettings) => void;
+
+  // Social
+  searchUsers: (query: string) => Promise<UserProfile[]>;
+  addFriend: (user: UserProfile) => Promise<void>;
+  removeFriend: (uid: string) => Promise<void>;
+  sendMessage: (toUid: string, toUsername: string, text: string) => Promise<void>;
+  markConversationRead: (conversationId: string) => Promise<void>;
+
+  // Admin
+  adminUpdateUser: (uid: string, data: Partial<UserProfile>) => Promise<void>;
+  adminDeleteUser: (uid: string) => Promise<void>;
+  adminUpdateLoan: (loanId: string, data: Partial<Loan>) => Promise<void>;
+  adminDeleteLoan: (loanId: string) => Promise<void>;
+  adminAddCollection: (collection: Omit<Collection, 'id' | 'createdAt'>) => Promise<void>;
+  adminUpdateCollection: (id: string, data: Partial<Collection>) => Promise<void>;
+  adminDeleteCollection: (id: string) => Promise<void>;
 }

@@ -102,10 +102,36 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, repayLoan, liquidateLoan }) =
              </div>
           )}
 
+          {/* NFT Transfer Status */}
+          {loan.nftTransferStatus && (
+            <div className={`mt-4 px-3 py-2 rounded-lg border text-xs font-semibold flex items-center gap-2 ${
+              loan.nftTransferStatus === 'awaiting_transfer' ? 'bg-yellow-400/10 text-yellow-400 border-yellow-500/30' :
+              loan.nftTransferStatus === 'received'          ? 'bg-blue-400/10 text-blue-400 border-blue-500/30' :
+              loan.nftTransferStatus === 'active'            ? 'bg-green-400/10 text-green-400 border-green-500/30' :
+              loan.nftTransferStatus === 'returned'          ? 'bg-purple-400/10 text-purple-400 border-purple-500/30' :
+                                                               'bg-red-400/10 text-red-400 border-red-500/30'
+            }`}>
+              {loan.nftTransferStatus === 'awaiting_transfer' && '⏳ Awaiting NFT Transfer'}
+              {loan.nftTransferStatus === 'received'          && '📬 NFT Received by DigiPawns'}
+              {loan.nftTransferStatus === 'active'            && '✅ NFT Held — Loan Active'}
+              {loan.nftTransferStatus === 'returned'          && '🔄 NFT Being Returned'}
+              {loan.nftTransferStatus === 'liquidated'        && '🔴 NFT Liquidated'}
+            </div>
+          )}
+
+          {/* Awaiting transfer instructions */}
+          {loan.nftTransferStatus === 'awaiting_transfer' && loan.status === 'Active' && (
+            <div className="mt-3 p-3 bg-brand-dark/60 rounded-lg border border-yellow-900/30 text-xs text-gray-400 space-y-1">
+              <p className="font-semibold text-yellow-300">📋 Next step: Transfer your NFT</p>
+              <p>Send your NFT to our vault address. Your loan activates once we confirm receipt.</p>
+              {loan.contractAddress && <p className="font-mono text-gray-500">Contract: {loan.contractAddress.slice(0,12)}…</p>}
+            </div>
+          )}
+
           {loan.status === 'Active' && (
             <button 
               onClick={() => setIsRepayModalOpen(true)}
-              className="w-full mt-6 bg-brand-gold text-brand-dark font-bold py-2.5 px-6 rounded-lg hover:bg-brand-gold-light transition-all duration-300 shadow-md">
+              className="w-full mt-4 bg-brand-gold text-brand-dark font-bold py-2.5 px-6 rounded-lg hover:bg-brand-gold-light transition-all duration-300 shadow-md">
               Repay Loan
             </button>
           )}

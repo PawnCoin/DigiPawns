@@ -1,0 +1,1 @@
+- [DigiPawns architecture](digipawns-arch.md) — key data collections, admin detection, social messaging approach, NFT transfer flow
