@@ -34,3 +34,6 @@ Admin can add/edit/delete via AdminPage → Collections tab to override placehol
 
 ## User Search
 Uses Firestore prefix query: `where('username', '>=', q), where('username', '<=', q + '\uf8ff')` — requires username to be lowercase-consistent for best results.
+
+## Setup Notes
+Needs `GEMINI_API_KEY` secret (used for appraisals/portfolio simulation) and Firebase already configured via `firebase-applet-config.json`. `npm run dev` on port 5000. `index.html` has a leftover AI-Studio-scaffold `<script type="importmap">` pointing at aistudiocdn.com — dead code under Vite, safe to ignore/remove.
