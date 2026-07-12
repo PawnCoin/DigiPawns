@@ -61,8 +61,8 @@ const Header: React.FC = () => {
   return (
     <header className="sticky top-0 z-50 bg-brand-dark/90 backdrop-blur-md border-b border-yellow-900/30">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20">
-          <a href="/"><DigiPawnsFullLogo /></a>
+        <div className="flex items-center justify-between h-24">
+          <a href="/" className="flex-shrink-0"><DigiPawnsFullLogo className="h-24 py-2" /></a>
           <nav className="hidden md:flex items-center space-x-8">
             <button onClick={() => navigate('/shop')} className={`transition-colors duration-200 ${route === '/shop' ? 'text-brand-gold' : 'text-gray-400 hover:text-brand-gold'}`}>Shop Floor</button>
             <a href="#how-it-works" onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">How It Works</a>
