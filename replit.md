@@ -62,6 +62,27 @@ Copy `contracts/.env.example` → `contracts/.env` and fill in:
 
 After deployment, the script prints the deployed address and a `npx hardhat verify` command. Add `VITE_ESCROW_ADDRESS=<deployed>` to Replit Secrets so the frontend can call the contract.
 
+## Browse Wallet / Multi-chain NFT lookup
+The Portfolio tab in the Dashboard has two sub-tabs:
+- **My Portfolio** — shows NFTs in the connected Base Sepolia testnet wallet (via Alchemy).
+- **Browse Wallet** — lets anyone paste a wallet address, ENS name (e.g. `vitalik.eth`), or OpenSea username and fetch their NFTs across Ethereum, Base, Polygon, Arbitrum, and Optimism mainnet via Alchemy, plus Solana and all chains via OpenSea.
+
+Each imported NFT card has:
+- **Appraise & Pawn** — navigates to the homepage appraise form with contract/tokenId pre-filled.
+- **Sell to Shop** — opens `BrowseSellModal`, runs a Gemini appraisal, and lists the item on the shop floor at 60% of market value.
+
+### Required secrets
+| Secret | Used for |
+|--------|----------|
+| `ALCHEMY_API_KEY` | Multi-chain NFT fetching (Ethereum, Base, Polygon, Arbitrum, Optimism mainnet) |
+| `OPENSEA_API_KEY` | OpenSea NFT fetching + username → address resolution. Optional — Alchemy covers all EVM chains without it. Get a free key at https://docs.opensea.io/reference/api-overview |
+
+### Relevant files
+- `services/openSeaService.ts` — OpenSea API v2, Alchemy multi-chain, ENS resolution
+- `services/nftService.ts` — existing Base Sepolia Alchemy fetch (unchanged)
+- `components/SettingsView.tsx` — Portfolio + Browse Wallet UI
+- `components/BrowseSellModal.tsx` — pre-filled Sell to Shop modal
+
 ## Notes
 - `index.html` still contains a leftover `<script type="importmap">` pointing at `aistudiocdn.com` from the original AI Studio scaffold. It is unused now that the project runs through Vite/npm (Vite resolves imports from `node_modules`), so it's safe to ignore or remove later.
 - See `.agents/memory/digipawns-arch.md` for deeper architecture notes (Firestore collections, admin detection, messaging, NFT transfer flow).
