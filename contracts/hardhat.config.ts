@@ -5,9 +5,9 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 // Placeholder key so compilation/testing work without a real key.
-// For deployment, set DEPLOYER_PRIVATE_KEY in contracts/.env
-const PRIVATE_KEY =
-  process.env.DEPLOYER_PRIVATE_KEY ?? "0x" + "0".repeat(64);
+// For deployment, set DEPLOYER_PRIVATE_KEY in Replit Secrets (with or without 0x prefix).
+const rawKey = process.env.DEPLOYER_PRIVATE_KEY ?? "0".repeat(64);
+const PRIVATE_KEY = rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`;
 const BASE_SEPOLIA_RPC =
   process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org";
 const BASESCAN_API_KEY = process.env.BASESCAN_API_KEY ?? "";

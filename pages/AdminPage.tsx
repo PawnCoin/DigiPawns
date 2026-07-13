@@ -101,6 +101,34 @@ const AdminPage: React.FC = () => {
         setConfirmDelete(null);
     };
 
+    const handleEscrowRelease = async (loan: Loan) => {
+        if (!loan.numericLoanId) return;
+        setEscrowLoadingId(loan.id);
+        try {
+            await releaseToOwner(BigInt(loan.numericLoanId));
+            await adminUpdateLoan(loan.id, { status: 'Repaid', nftTransferStatus: 'returned' });
+            toast.success('NFT released to borrower on-chain.');
+        } catch {
+            toast.error('Release failed — connected wallet must be the contract owner.');
+        } finally {
+            setEscrowLoadingId(null);
+        }
+    };
+
+    const handleEscrowSweep = async (loan: Loan) => {
+        if (!loan.numericLoanId) return;
+        setEscrowLoadingId(loan.id);
+        try {
+            await sweepToShop(BigInt(loan.numericLoanId));
+            await adminUpdateLoan(loan.id, { status: 'Liquidated', nftTransferStatus: 'liquidated' });
+            toast.success('NFT swept to shop on-chain.');
+        } catch {
+            toast.error('Sweep failed — connected wallet must be the contract owner.');
+        } finally {
+            setEscrowLoadingId(null);
+        }
+    };
+
     return (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
