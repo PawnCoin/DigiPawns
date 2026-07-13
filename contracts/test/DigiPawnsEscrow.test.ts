@@ -3,17 +3,16 @@ import { ethers } from "hardhat";
 import { DigiPawnsEscrow, MockNFT } from "../typechain-types";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
-// Loan status enum mirrors the Solidity enum
 const Status = { Active: 0n, Released: 1n, Swept: 2n };
 
 describe("DigiPawnsEscrow", function () {
   let escrow: DigiPawnsEscrow;
   let nft: MockNFT;
 
-  let owner: SignerWithAddress;    // contract owner / DigiPawns operator
-  let borrower: SignerWithAddress; // NFT holder who opens a loan
-  let shop: SignerWithAddress;     // shop wallet that receives defaulted NFTs
-  let other: SignerWithAddress;    // unprivileged third party
+  let owner: SignerWithAddress;
+  let borrower: SignerWithAddress;
+  let shop: SignerWithAddress;
+  let other: SignerWithAddress;
 
   const LOAN_ID = 42n;
   let TOKEN_ID: bigint;
@@ -25,6 +24,9 @@ describe("DigiPawnsEscrow", function () {
     nft = await ethers.deployContract("MockNFT");
     escrow = await ethers.deployContract("DigiPawnsEscrow", [shop.address]);
     escrowAddress = await escrow.getAddress();
+
+    // Approve MockNFT as a valid collateral collection (required after allowlist addition)
+    await escrow.connect(owner).approveCollection(await nft.getAddress());
 
     // Mint token 0 to borrower and approve escrow
     TOKEN_ID = await nft.connect(borrower).mint.staticCall(borrower.address);
@@ -50,6 +52,70 @@ describe("DigiPawnsEscrow", function () {
     });
   });
 
+  // ─── approveCollection / revokeCollection ────────────────────────────────
+
+  describe("approveCollection / revokeCollection", function () {
+    it("reflects approved status set in beforeEach", async function () {
+      expect(await escrow.approvedCollections(await nft.getAddress())).to.be.true;
+    });
+
+    it("emits CollectionApproved", async function () {
+      const newNft = await ethers.deployContract("MockNFT");
+      await expect(escrow.connect(owner).approveCollection(await newNft.getAddress()))
+        .to.emit(escrow, "CollectionApproved")
+        .withArgs(await newNft.getAddress());
+    });
+
+    it("emits CollectionRevoked", async function () {
+      await expect(escrow.connect(owner).revokeCollection(await nft.getAddress()))
+        .to.emit(escrow, "CollectionRevoked")
+        .withArgs(await nft.getAddress());
+    });
+
+    it("reverts approveCollection with zero address", async function () {
+      await expect(
+        escrow.connect(owner).approveCollection(ethers.ZeroAddress)
+      ).to.be.revertedWith("Escrow: zero address");
+    });
+
+    it("reverts approveCollection when called by non-owner", async function () {
+      await expect(
+        escrow.connect(other).approveCollection(await nft.getAddress())
+      ).to.be.revertedWithCustomError(escrow, "OwnableUnauthorizedAccount");
+    });
+
+    it("reverts revokeCollection when called by non-owner", async function () {
+      await expect(
+        escrow.connect(other).revokeCollection(await nft.getAddress())
+      ).to.be.revertedWithCustomError(escrow, "OwnableUnauthorizedAccount");
+    });
+
+    it("reverts depositNFT for a revoked collection", async function () {
+      await escrow.connect(owner).revokeCollection(await nft.getAddress());
+      await expect(
+        escrow.connect(borrower).depositNFT(LOAN_ID, await nft.getAddress(), TOKEN_ID)
+      ).to.be.revertedWith("Escrow: collection not approved");
+    });
+
+    it("allows deposit again after re-approving a revoked collection", async function () {
+      await escrow.connect(owner).revokeCollection(await nft.getAddress());
+      await escrow.connect(owner).approveCollection(await nft.getAddress());
+      await escrow.connect(borrower).depositNFT(LOAN_ID, await nft.getAddress(), TOKEN_ID);
+      expect(await nft.ownerOf(TOKEN_ID)).to.equal(escrowAddress);
+    });
+
+    it("reverts depositNFT for an entirely unapproved collection", async function () {
+      const unapprovedNft = await ethers.deployContract("MockNFT");
+      const unapprovedTokenId = await unapprovedNft.connect(borrower).mint.staticCall(borrower.address);
+      await unapprovedNft.connect(borrower).mint(borrower.address);
+      await unapprovedNft.connect(borrower).approve(escrowAddress, unapprovedTokenId);
+
+      await expect(
+        escrow.connect(borrower).depositNFT(LOAN_ID, await unapprovedNft.getAddress(), unapprovedTokenId)
+      ).to.be.revertedWith("Escrow: collection not approved");
+    });
+  });
+
   // ─── depositNFT ──────────────────────────────────────────────────────────
 
   describe("depositNFT", function () {
@@ -58,7 +124,6 @@ describe("DigiPawnsEscrow", function () {
         .connect(borrower)
         .depositNFT(LOAN_ID, await nft.getAddress(), TOKEN_ID);
 
-      // NFT now held by escrow
       expect(await nft.ownerOf(TOKEN_ID)).to.equal(escrowAddress);
 
       const loan = await escrow.getLoan(LOAN_ID);
@@ -83,7 +148,6 @@ describe("DigiPawnsEscrow", function () {
         .connect(borrower)
         .depositNFT(LOAN_ID, await nft.getAddress(), TOKEN_ID);
 
-      // Mint a second NFT for the same loanId attempt
       const TOKEN_ID_2 = await nft.connect(borrower).mint.staticCall(borrower.address);
       await nft.connect(borrower).mint(borrower.address);
       await nft.connect(borrower).approve(escrowAddress, TOKEN_ID_2);
@@ -97,31 +161,24 @@ describe("DigiPawnsEscrow", function () {
 
     it("reverts with zero NFT contract address", async function () {
       await expect(
-        escrow
-          .connect(borrower)
-          .depositNFT(LOAN_ID, ethers.ZeroAddress, TOKEN_ID)
+        escrow.connect(borrower).depositNFT(LOAN_ID, ethers.ZeroAddress, TOKEN_ID)
       ).to.be.revertedWith("Escrow: zero NFT contract");
     });
 
     it("reverts if caller does not own the NFT", async function () {
-      // 'other' tries to deposit borrower's token without ownership
       await expect(
-        escrow
-          .connect(other)
-          .depositNFT(LOAN_ID, await nft.getAddress(), TOKEN_ID)
-      ).to.be.reverted; // ERC721 transferFrom reverts
+        escrow.connect(other).depositNFT(LOAN_ID, await nft.getAddress(), TOKEN_ID)
+      ).to.be.reverted;
     });
 
     it("reverts if escrow is not approved", async function () {
-      // Mint second token but DON'T approve escrow
       const TOKEN_ID_2 = await nft.connect(borrower).mint.staticCall(borrower.address);
       await nft.connect(borrower).mint(borrower.address);
+      // No approve call
 
       await expect(
-        escrow
-          .connect(borrower)
-          .depositNFT(99n, await nft.getAddress(), TOKEN_ID_2)
-      ).to.be.reverted; // ERC721 transferFrom reverts
+        escrow.connect(borrower).depositNFT(99n, await nft.getAddress(), TOKEN_ID_2)
+      ).to.be.reverted;
     });
   });
 
@@ -269,7 +326,6 @@ describe("DigiPawnsEscrow", function () {
       ).to.be.revertedWithCustomError(escrow, "OwnableUnauthorizedAccount");
     });
 
-    // Sweep after shop address rotation — NFT goes to the new shop
     it("sweeps to the updated shop address", async function () {
       await escrow
         .connect(borrower)
@@ -288,7 +344,7 @@ describe("DigiPawnsEscrow", function () {
       expect(loan.borrower).to.equal(ethers.ZeroAddress);
       expect(loan.nftContract).to.equal(ethers.ZeroAddress);
       expect(loan.tokenId).to.equal(0n);
-      expect(loan.status).to.equal(Status.Active); // default enum value
+      expect(loan.status).to.equal(Status.Active);
     });
 
     it("returns the correct record after deposit", async function () {
@@ -312,14 +368,9 @@ describe("DigiPawnsEscrow", function () {
       await nft.connect(borrower).mint(borrower.address);
       await nft.connect(borrower).approve(escrowAddress, TOKEN_ID_2);
 
-      await escrow
-        .connect(borrower)
-        .depositNFT(LOAN_ID, await nft.getAddress(), TOKEN_ID);
-      await escrow
-        .connect(borrower)
-        .depositNFT(LOAN_ID_2, await nft.getAddress(), TOKEN_ID_2);
+      await escrow.connect(borrower).depositNFT(LOAN_ID, await nft.getAddress(), TOKEN_ID);
+      await escrow.connect(borrower).depositNFT(LOAN_ID_2, await nft.getAddress(), TOKEN_ID_2);
 
-      // Release first, sweep second — they should be independent
       await escrow.connect(owner).releaseToOwner(LOAN_ID);
       await escrow.connect(owner).sweepToShop(LOAN_ID_2);
 

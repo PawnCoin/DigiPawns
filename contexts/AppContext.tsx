@@ -264,7 +264,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 dueDate: loan.dueDate,
                 repaymentAmount: loan.repaymentAmount,
                 status: loan.status,
-                nftTransferStatus: 'awaiting_transfer',
+                // Use 'received' when the NFT was actually deposited on-chain; fall back to awaiting
+                nftTransferStatus: loan.nftTransferStatus || 'awaiting_transfer',
+                // Store the on-chain loanId so admin can call releaseToOwner / sweepToShop
+                ...(loan.numericLoanId ? { numericLoanId: loan.numericLoanId } : {}),
                 createdAt: new Date().toISOString(),
             };
             await setDoc(doc(collection(db, 'loans')), newLoan);

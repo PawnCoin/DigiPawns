@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { NFT_MARKETPLACES } from '../constants';
 import type { NftMarketplace, NftAppraisal, Loan, LoanTerms } from '../types';
 import { getNftAppraisal } from '../services/geminiService';
@@ -16,6 +16,10 @@ const PawnForm: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [nftDetailsForLoan, setNftDetailsForLoan] = useState<{name: string, collection: string}>({ name: 'Unnamed NFT', collection: 'Unknown Collection'});
+
+    // Generated once per "Accept Offer" click — used as the on-chain loanId.
+    const numericLoanIdRef = useRef<bigint>(0n);
+    const [numericLoanId, setNumericLoanId] = useState<bigint>(0n);
 
     const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
     const [customInterestRate, setCustomInterestRate] = useState(5.0);
@@ -54,20 +58,20 @@ const PawnForm: React.FC = () => {
             setCustomInterestRate(5.0);
             setCustomTermLength(30);
         } catch (err: unknown) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError("An unknown error occurred.");
-            }
+            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
         } finally {
             setIsLoading(false);
         }
     }, [contractAddress, tokenId, selectedMarket]);
 
     const handleAcceptOffer = () => {
-        if(appraisalResult) {
-            setIsModalOpen(true);
-        }
+        if (!appraisalResult) return;
+        // Generate a fresh uint256 loan ID for this acceptance attempt.
+        // Using timestamp (milliseconds) gives a unique-enough ID for testnet use.
+        const id = BigInt(Date.now());
+        numericLoanIdRef.current = id;
+        setNumericLoanId(id);
+        setIsModalOpen(true);
     };
     
     const handleTransactionSuccess = (newLoan: Loan) => {
@@ -213,6 +217,9 @@ const PawnForm: React.FC = () => {
                     nftDetails={nftDetailsForLoan}
                     loanTerms={loanTerms}
                     onSuccess={handleTransactionSuccess}
+                    contractAddress={contractAddress}
+                    tokenId={tokenId}
+                    numericLoanId={numericLoanId}
                  />
             )}
         </>

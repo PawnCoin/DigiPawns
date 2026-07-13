@@ -15,7 +15,8 @@ export default defineConfig(({ mode }) => {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.ALCHEMY_API_KEY': JSON.stringify(env.ALCHEMY_API_KEY),
-        'process.env.WALLETCONNECT_PROJECT_ID': JSON.stringify(env.WALLETCONNECT_PROJECT_ID)
+        'process.env.WALLETCONNECT_PROJECT_ID': JSON.stringify(env.WALLETCONNECT_PROJECT_ID),
+      'process.env.VITE_ESCROW_ADDRESS': JSON.stringify(env.VITE_ESCROW_ADDRESS)
       },
       resolve: {
         alias: {

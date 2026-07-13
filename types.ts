@@ -23,6 +23,8 @@ export interface Loan {
   contractAddress?: string;
   tokenId?: string;
   nftChain?: string;
+  /** String representation of the uint256 loanId used on-chain with DigiPawnsEscrow. */
+  numericLoanId?: string;
   nft: {
     name: string;
     collection: string;

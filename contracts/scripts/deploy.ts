@@ -10,6 +10,9 @@ import { ethers } from "hardhat";
  * Optional:
  *   BASE_SEPOLIA_RPC_URL  — defaults to https://sepolia.base.org
  *   BASESCAN_API_KEY      — needed only for post-deploy contract verification
+ *   APPROVED_COLLECTIONS  — comma-separated ERC-721 contract addresses to
+ *                           approve on the allowlist immediately after deploy
+ *                           (e.g. "0xAbc...,0xDef...")
  *
  * Usage:
  *   npm run deploy:baseSepolia
@@ -20,9 +23,7 @@ import { ethers } from "hardhat";
 async function main() {
   const shopAddress = process.env.SHOP_ADDRESS;
   if (!shopAddress) {
-    throw new Error(
-      "SHOP_ADDRESS env var is required — set it in contracts/.env"
-    );
+    throw new Error("SHOP_ADDRESS env var is required — set it in contracts/.env");
   }
   if (!ethers.isAddress(shopAddress)) {
     throw new Error(`SHOP_ADDRESS is not a valid Ethereum address: ${shopAddress}`);
@@ -47,20 +48,37 @@ async function main() {
 
   process.stdout.write("Deploying… ");
   await escrow.waitForDeployment();
-
   const address = await escrow.getAddress();
-  console.log("done.");
+  console.log("done.\n");
+
+  // Approve initial collections if provided
+  const rawCollections = process.env.APPROVED_COLLECTIONS;
+  if (rawCollections) {
+    const collections = rawCollections.split(",").map(s => s.trim()).filter(Boolean);
+    for (const col of collections) {
+      if (!ethers.isAddress(col)) {
+        console.warn(`Skipping invalid address: ${col}`);
+        continue;
+      }
+      process.stdout.write(`Approving collection ${col}… `);
+      const tx = await escrow.approveCollection(col);
+      await tx.wait();
+      console.log("done.");
+    }
+  }
+
   console.log("────────────────────────────────────────");
   console.log("DigiPawnsEscrow deployed to:", address);
   console.log("────────────────────────────────────────");
-  console.log("\nSave this address, then run:");
-  console.log(
-    `  npx hardhat verify --network baseSepolia ${address} "${shopAddress}"`
-  );
-  console.log(
-    "\nAdd to your frontend .env / Replit Secrets:"
-  );
-  console.log(`  VITE_ESCROW_ADDRESS=${address}`);
+  console.log("\nNext steps:");
+  console.log("1. Verify on Basescan:");
+  console.log(`   npx hardhat verify --network baseSepolia ${address} "${shopAddress}"`);
+  console.log("\n2. Add to Replit Secrets:");
+  console.log(`   VITE_ESCROW_ADDRESS=${address}`);
+  console.log("\n3. Approve collateral collections (if not set via APPROVED_COLLECTIONS):");
+  console.log(`   npx hardhat console --network baseSepolia`);
+  console.log(`   > const e = await ethers.getContractAt("DigiPawnsEscrow", "${address}")`);
+  console.log(`   > await e.approveCollection("0xYourNftContract")`);
 }
 
 main().catch((err) => {

@@ -3,6 +3,8 @@ import { useAppContext } from '../contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Collection, Loan, UserProfile, ShopItem } from '../types';
 import { toast } from 'sonner';
+import { useEscrowAdmin } from '../hooks/useEscrow';
+import { ESCROW_ADDRESS } from '../services/escrowService';
 
 type AdminTab = 'users' | 'loans' | 'collections' | 'shop';
 
@@ -33,6 +35,8 @@ const AdminPage: React.FC = () => {
     const [editingShopItem, setEditingShopItem] = useState<string | null>(null);
     const [showShopItemForm, setShowShopItemForm] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ type: string; id: string; label: string } | null>(null);
+    const [escrowLoadingId, setEscrowLoadingId] = useState<string | null>(null);
+    const { releaseToOwner, sweepToShop, escrowReady } = useEscrowAdmin();
 
     if (!isAdmin) {
         return (
