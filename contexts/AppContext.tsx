@@ -311,16 +311,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const currentBalance = profile.balance ?? STARTING_BALANCE;
         if (currentBalance < item.price) { toast.error("You don't have enough store credit for this item."); return; }
         try {
-            await deleteDoc(doc(db, 'shopInventory', itemId));
-            await addDoc(collection(db, 'ownedItems'), {
+            // Atomic batch: remove from shop, add to owned, deduct balance.
+            // All three succeed together or none do — item can't disappear without
+            // being credited to the buyer.
+            const batch = writeBatch(db);
+            batch.delete(doc(db, 'shopInventory', itemId));
+            const ownedRef = doc(collection(db, 'ownedItems'));
+            batch.set(ownedRef, {
                 uid: userId, name: item.name, collection: item.collection, imageUrl: item.imageUrl,
                 category: item.category || '', chain: item.chain || 'Ethereum', price: item.price,
                 source: item.source, listedAt: new Date().toISOString(),
             });
-            await setDoc(doc(db, 'users', userId), { balance: currentBalance - item.price }, { merge: true });
+            batch.update(doc(db, 'users', userId), { balance: currentBalance - item.price });
+            await batch.commit();
             logActivity('item-bought', `Purchased ${item.name} from the shop floor for ${item.price.toLocaleString()}.`);
             toast.success(`You bought ${item.name}!`);
-        } catch { toast.error('Purchase failed. Please try again.'); }
+        } catch (err) {
+            console.error('buyShopItem failed:', err);
+            toast.error('Purchase failed. Please try again.');
+        }
     };
 
     const sellNftToShop = async (nft: { name: string; collection: string; imageUrl: string; category?: string }, price: number) => {
@@ -344,22 +353,31 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const item = shopInventory.find(i => i.id === shopItemId);
         if (!item) { toast.error('That item is no longer available.'); return; }
         try {
-            await deleteDoc(doc(db, 'shopInventory', shopItemId));
-            await addDoc(collection(db, 'ownedItems'), {
+            // Atomic batch: remove shop item, credit it to the buyer, and list
+            // the traded-in NFT as new floor inventory — all or nothing.
+            const batch = writeBatch(db);
+            batch.delete(doc(db, 'shopInventory', shopItemId));
+            const ownedRef = doc(collection(db, 'ownedItems'));
+            batch.set(ownedRef, {
                 uid: userId, name: item.name, collection: item.collection, imageUrl: item.imageUrl,
                 category: item.category || '', chain: item.chain || 'Ethereum', price: item.price,
                 source: item.source, listedAt: new Date().toISOString(),
             });
             // The traded-in NFT becomes new shop floor inventory.
-            await addDoc(collection(db, 'shopInventory'), {
+            const tradeInRef = doc(collection(db, 'shopInventory'));
+            batch.set(tradeInRef, {
                 name: offeredNft.name, collection: offeredNft.collection, imageUrl: offeredNft.imageUrl,
                 category: offeredNft.category || '', chain: 'Ethereum', price: item.price,
                 source: 'trade-in', sellerUid: userId, sellerUsername: profile.username,
                 listedAt: new Date().toISOString(),
             });
+            await batch.commit();
             logActivity('item-traded', `Traded ${offeredNft.name} for ${item.name}.`);
             toast.success(`Trade complete! You now own ${item.name}.`);
-        } catch { toast.error('Trade failed. Please try again.'); }
+        } catch (err) {
+            console.error('tradeInForItem failed:', err);
+            toast.error('Trade failed. Please try again.');
+        }
     };
 
     // ── Admin: Shop inventory ──────────────────────────────────────────────────

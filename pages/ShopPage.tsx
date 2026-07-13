@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { useAppContext } from '../contexts/AppContext';
 import { PLACEHOLDER_SHOP_ITEMS } from '../mock-data';
 import { NFT_CATEGORIES } from '../constants';
@@ -20,7 +21,8 @@ const ShopPage: React.FC = () => {
 
     // The shop floor always shows something to browse, even before any real listings exist —
     // same fallback convention used for the homepage's featured collections.
-    const displayItems = shopInventory.length > 0 ? shopInventory : PLACEHOLDER_SHOP_ITEMS;
+    const usingPlaceholders = shopInventory.length === 0;
+    const displayItems = usingPlaceholders ? PLACEHOLDER_SHOP_ITEMS : shopInventory;
 
     const filteredItems = useMemo(() => {
         return displayItems.filter(item => {
@@ -32,10 +34,19 @@ const ShopPage: React.FC = () => {
         });
     }, [displayItems, category, search]);
 
+    const PLACEHOLDER_MSG = 'This is a sample listing. Real inventory appears when loans are forfeited or admins add items.';
+
     const handleBuy = async (item: ShopItem) => {
         if (!isConnected) { connectWallet(); return; }
+        if (usingPlaceholders) { toast.info(PLACEHOLDER_MSG); return; }
         setBuyingId(item.id);
         try { await buyShopItem(item.id); } finally { setBuyingId(null); }
+    };
+
+    const handleTrade = (item: ShopItem) => {
+        if (!isConnected) { connectWallet(); return; }
+        if (usingPlaceholders) { toast.info(PLACEHOLDER_MSG); return; }
+        setTradeItem(item);
     };
 
     const TabBtn: React.FC<{ id: ShopTab; label: string; count?: number }> = ({ id, label, count }) => (
@@ -111,7 +122,7 @@ const ShopPage: React.FC = () => {
                                                 item={item}
                                                 disabled={buyingId === item.id}
                                                 onBuy={() => handleBuy(item)}
-                                                onTrade={() => (isConnected ? setTradeItem(item) : connectWallet())}
+                                                onTrade={() => handleTrade(item)}
                                             />
                                         ))}
                                     </div>
