@@ -165,11 +165,6 @@ const SettingsView: React.FC = () => {
                 )}
             </div>
             <div className="lg:col-span-2">
-                {walletAddress && (
-                    <div className="mb-3 text-xs text-yellow-500/80 bg-yellow-900/10 border border-yellow-900/30 rounded-md px-3 py-2">
-                        Wallet connection above is real. This NFT list is still simulated (AI-generated) — real on-chain NFT indexing is a planned next phase.
-                    </div>
-                )}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4">
                     <h3 className="font-semibold text-lg text-white mb-2 sm:mb-0">Assets in <span className="font-mono text-brand-gold">{walletAddress ? shortenAddress(walletAddress) : 'No Wallet Connected'}</span></h3>
                     <div className="w-full sm:w-auto">
