@@ -1,0 +1,22 @@
+{
+  "name": "digipawns-contracts",
+  "version": "1.0.0",
+  "description": "DigiPawns NFT escrow smart contracts",
+  "private": true,
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "coverage": "hardhat coverage",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@openzeppelin/contracts": "^5.0.0",
+    "dotenv": "^16.4.0",
+    "hardhat": "^2.22.0",
+    "tsx": "^4.23.1",
+    "typescript": "5.8"
+  }
+}

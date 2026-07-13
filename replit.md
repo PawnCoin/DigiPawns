@@ -29,6 +29,39 @@ DigiPawns is a Vite + React + TypeScript single-page app that simulates an NFT-b
 - Admins get a "Shop Floor" tab in `/admin` to manually add/edit/delete listings, same CRUD pattern as the Collections tab.
 - Like other collections, `shopInventory`/`ownedItems` need their Firestore rules (already added to `firestore.rules`) pasted into the Firebase Console to take effect — see task about deploying Firestore rules from Replit.
 
+## Smart contracts (Hardhat)
+
+The `contracts/` directory is a self-contained Hardhat project — independent from the Vite frontend.
+
+### Stack
+- Solidity 0.8.28 (EVM target: Cancun) + OpenZeppelin v5
+- Hardhat 2.22 + `@nomicfoundation/hardhat-toolbox` (ethers v6, Mocha/Chai, typechain)
+- TypeScript 5.8 (ts-node v10 is not compatible with TypeScript 7, so contracts pin to 5.8)
+
+### Key contract: `contracts/contracts/DigiPawnsEscrow.sol`
+Escrows ERC-721 NFT collateral for loans.
+- `depositNFT(loanId, nftContract, tokenId)` — borrower transfers NFT in (must approve first)
+- `releaseToOwner(loanId)` — operator sends NFT back to borrower on repayment
+- `sweepToShop(loanId)` — operator sends NFT to shop wallet on default
+- `updateShopAddress(newAddr)` — rotate the shop wallet (owner only)
+
+### Common commands (run from `contracts/`)
+```
+npm run compile          # compile all Solidity
+npm test                 # 33 tests, all passing
+npm run deploy:local     # deploy to local hardhat node
+npm run deploy:baseSepolia  # deploy to Base Sepolia testnet
+```
+
+### Deployment env vars
+Copy `contracts/.env.example` → `contracts/.env` and fill in:
+- `DEPLOYER_PRIVATE_KEY` — deployer wallet private key
+- `SHOP_ADDRESS` — wallet that receives defaulted NFT collateral
+- `BASE_SEPOLIA_RPC_URL` — defaults to `https://sepolia.base.org`
+- `BASESCAN_API_KEY` — optional, for contract verification on Basescan
+
+After deployment, the script prints the deployed address and a `npx hardhat verify` command. Add `VITE_ESCROW_ADDRESS=<deployed>` to Replit Secrets so the frontend can call the contract.
+
 ## Notes
 - `index.html` still contains a leftover `<script type="importmap">` pointing at `aistudiocdn.com` from the original AI Studio scaffold. It is unused now that the project runs through Vite/npm (Vite resolves imports from `node_modules`), so it's safe to ignore or remove later.
 - See `.agents/memory/digipawns-arch.md` for deeper architecture notes (Firestore collections, admin detection, messaging, NFT transfer flow).
