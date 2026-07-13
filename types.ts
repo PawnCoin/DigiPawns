@@ -190,7 +190,8 @@ export interface AppContextType {
   navigate: (path: string) => void;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
-  connectRealWallet: () => Promise<void>;
+  connectRealWallet: (connectorId?: string) => Promise<void>;
+  walletOptions: { id: string; label: string; description: string }[];
   disconnectChainWallet: () => void;
 
   // Loan actions

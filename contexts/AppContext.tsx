@@ -9,7 +9,7 @@ import {
     deleteDoc, getDocs, limit, addDoc, writeBatch
 } from 'firebase/firestore';
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
-import { TARGET_CHAIN } from '../lib/web3';
+import { TARGET_CHAIN, WALLET_OPTIONS } from '../lib/web3';
 
 const STARTING_BALANCE = 25000;
 
@@ -51,14 +51,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const { switchChainAsync } = useSwitchChain();
     const isCorrectChain = isWalletConnected && chainId === TARGET_CHAIN.id;
 
-    const connectRealWallet = useCallback(async () => {
+    // `connectorId` lets the caller pick which wallet to use (browser
+    // extension, Coinbase Wallet, WalletConnect QR, ...). Defaults to the
+    // first available connector for backwards-compatible single-click use.
+    const connectRealWallet = useCallback(async (connectorId?: string) => {
         try {
-            const injectedConnector = connectors.find(c => c.id === 'injected') || connectors[0];
-            if (!injectedConnector) {
-                toast.error('No browser wallet found. Install MetaMask to connect a real wallet.');
+            const chosenConnector = (connectorId && connectors.find(c => c.id === connectorId)) || connectors[0];
+            if (!chosenConnector) {
+                toast.error('No wallet connectors are available.');
                 return;
             }
-            const result = await connectAsync({ connector: injectedConnector });
+            const result = await connectAsync({ connector: chosenConnector });
             if (result.chainId !== TARGET_CHAIN.id) {
                 try { await switchChainAsync({ chainId: TARGET_CHAIN.id }); }
                 catch { toast.error(`Please switch your wallet to ${TARGET_CHAIN.name} manually.`); }
@@ -484,6 +487,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         notificationSettings, activityLog, friends, messages, collections,
         allUsers, allLoans, shopInventory, ownedItems,
         isWalletConnected, isConnectingWallet, isCorrectChain, chainName: TARGET_CHAIN.name,
+        walletOptions: WALLET_OPTIONS,
         navigate, connectWallet, disconnectWallet, connectRealWallet, disconnectChainWallet,
         addLoan, repayLoan, liquidateLoan,
         buyShopItem, sellNftToShop, tradeInForItem,

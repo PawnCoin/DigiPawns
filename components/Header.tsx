@@ -2,14 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DigiPawnsFullLogo, WalletIcon, LogOutIcon } from './IconComponents';
 import { useAppContext } from '../contexts/AppContext';
 import useRouter from '../hooks/useRouter';
+import WalletPickerModal from './WalletPickerModal';
 
 const Header: React.FC = () => {
   const {
     isConnected, isAdmin, walletAddress, profile, connectWallet, disconnectWallet, navigate,
-    isWalletConnected, isConnectingWallet, isCorrectChain, chainName, connectRealWallet, disconnectChainWallet,
+    isWalletConnected, isConnectingWallet, isCorrectChain, chainName, disconnectChainWallet,
   } = useAppContext();
   const { route } = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleScrollClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -87,7 +89,7 @@ const Header: React.FC = () => {
                 </span>
               ) : (
                 <button
-                  onClick={connectRealWallet}
+                  onClick={() => setIsWalletPickerOpen(true)}
                   disabled={isConnectingWallet}
                   className="hidden sm:flex items-center gap-2 text-xs font-semibold py-2 px-4 rounded-lg border border-yellow-900/50 text-brand-gold hover:border-brand-gold/60 hover:bg-brand-gold/10 transition-colors disabled:opacity-50"
                 >
@@ -140,6 +142,7 @@ const Header: React.FC = () => {
           </div>
         </div>
       </div>
+      {isWalletPickerOpen && <WalletPickerModal onClose={() => setIsWalletPickerOpen(false)} />}
     </header>
   );
 };

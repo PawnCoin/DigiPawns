@@ -3,6 +3,7 @@ import { WalletIcon } from './IconComponents';
 import type { Nft } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 import { fetchNftsForWallet } from '../services/nftService';
+import WalletPickerModal from './WalletPickerModal';
 
 const NftGridItem: React.FC<{ nft: Nft; onAppraise: () => void }> = ({ nft, onAppraise }) => (
     <div className="bg-brand-dark/60 rounded-lg overflow-hidden border border-yellow-900/30 group transition-all duration-300 hover:border-brand-gold/60 hover:shadow-lg">
@@ -35,7 +36,8 @@ const NftGridSkeleton: React.FC = () => (
 
 
 const SettingsView: React.FC = () => {
-    const { navigate, walletAddress, isWalletConnected, isConnectingWallet, isCorrectChain, chainName, connectRealWallet, disconnectChainWallet } = useAppContext();
+    const { navigate, walletAddress, isWalletConnected, isConnectingWallet, isCorrectChain, chainName, disconnectChainWallet } = useAppContext();
+    const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
 
     const [portfolio, setPortfolio] = useState<{ nfts: Nft[], isLoading: boolean, error: string | null }>({
         nfts: [],
@@ -155,7 +157,7 @@ const SettingsView: React.FC = () => {
                     </div>
                 ) : (
                     <button
-                        onClick={connectRealWallet}
+                        onClick={() => setIsWalletPickerOpen(true)}
                         disabled={isConnectingWallet}
                         className="w-full flex items-center justify-center space-x-2 text-brand-gold border-2 border-dashed border-yellow-900/40 hover:border-brand-gold/60 hover:bg-brand-gold/10 rounded-lg py-3 transition-colors disabled:opacity-50"
                     >
@@ -163,6 +165,7 @@ const SettingsView: React.FC = () => {
                         <span>{isConnectingWallet ? 'Connecting…' : 'Connect Wallet'}</span>
                     </button>
                 )}
+                {isWalletPickerOpen && <WalletPickerModal onClose={() => setIsWalletPickerOpen(false)} />}
             </div>
             <div className="lg:col-span-2">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4">

@@ -19,3 +19,10 @@ Wallet connection uses wagmi v2 + viem v2 (NOT the wagmi v3 latest — v3 requir
 **Why:** this project has no server layer to hide the key behind; the existing Gemini integration already ships its key client-side the same way, so this stays consistent rather than introducing a one-off backend just for Alchemy.
 
 **How to apply:** if a backend is ever added, move both the Gemini and Alchemy calls behind it. Until then, tell the user to restrict the Alchemy key by allowed domain in the Alchemy dashboard. Per-NFT `estimatedValue` from this listing is intentionally always `0` — real valuations only come from the separate Quick-Appraise flow (`services/geminiService.ts`), never fabricated as part of the wallet listing.
+
+## Multi-wallet connect (added)
+`lib/web3.ts` registers three wagmi connectors: `injected()` (any EIP-1193 browser extension, not just MetaMask), `coinbaseWallet()`, and `walletConnect()` (needs a free `WALLETCONNECT_PROJECT_ID` from cloud.reown.com — connector list conditionally omits it if the key is absent). `components/WalletPickerModal.tsx` shows a chooser instead of assuming one wallet; `connectRealWallet(connectorId?)` in `AppContext` takes an optional connector id.
+
+**Why:** user explicitly asked not to be limited to MetaMask.
+
+**How to apply:** when adding another connector in future, add it to `WALLET_OPTIONS` in `lib/web3.ts` with a matching `id` (check the connector's actual `id` field in its source, e.g. Coinbase's is `coinbaseWalletSDK`, not `coinbaseWallet`) so the picker UI and `connectRealWallet` stay in sync.
