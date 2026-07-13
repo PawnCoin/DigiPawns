@@ -28,22 +28,24 @@ export function useEscrowDeposit() {
 
     // 1. Approve escrow to transfer the NFT
     onStep?.('approving');
-    const approveTx = await writeContractAsync({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const approveTx = await (writeContractAsync as any)({
       address: nftContract,
       abi: ERC721_MINIMAL_ABI,
       functionName: 'approve',
       args: [escrowAddr, tokenId],
-    });
+    }) as `0x${string}`;
     await publicClient!.waitForTransactionReceipt({ hash: approveTx });
 
     // 2. Deposit NFT into escrow
     onStep?.('depositing');
-    const depositTx = await writeContractAsync({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const depositTx = await (writeContractAsync as any)({
       address: escrowAddr,
       abi: ESCROW_ABI,
       functionName: 'depositNFT',
       args: [numericLoanId, nftContract, tokenId],
-    });
+    }) as `0x${string}`;
     await publicClient!.waitForTransactionReceipt({ hash: depositTx });
 
     return depositTx;
@@ -63,12 +65,13 @@ export function useEscrowAdmin() {
     loanId: bigint
   ): Promise<`0x${string}`> => {
     if (!ESCROW_ADDRESS) throw new Error('Escrow contract not deployed yet.');
-    const tx = await writeContractAsync({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tx = await (writeContractAsync as any)({
       address: ESCROW_ADDRESS as `0x${string}`,
       abi: ESCROW_ABI,
       functionName,
       args: [loanId],
-    });
+    }) as `0x${string}`;
     await publicClient!.waitForTransactionReceipt({ hash: tx });
     return tx;
   };

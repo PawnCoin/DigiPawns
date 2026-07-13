@@ -253,10 +253,28 @@ const AdminPage: React.FC = () => {
                                                     {loan.dueDate ? new Date(loan.dueDate).toLocaleDateString() : '—'}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <button onClick={() => setConfirmDelete({ type: 'loan', id: loan.id, label: loan.nftName || loan.nft?.name || 'loan' })}
-                                                        className="text-red-500 hover:text-red-400 text-xs font-semibold px-2 py-1 rounded hover:bg-red-900/20 transition-colors">
-                                                        Delete
-                                                    </button>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        {escrowReady && loan.numericLoanId && loan.status === 'Active' && (
+                                                            <>
+                                                                <button
+                                                                    onClick={() => handleEscrowRelease(loan)}
+                                                                    disabled={escrowLoadingId === loan.id}
+                                                                    className="text-green-400 hover:text-green-300 text-xs font-semibold px-2 py-1 rounded hover:bg-green-900/20 disabled:opacity-40 transition-colors border border-green-900/40">
+                                                                    {escrowLoadingId === loan.id ? '…' : '↩ Release NFT'}
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleEscrowSweep(loan)}
+                                                                    disabled={escrowLoadingId === loan.id}
+                                                                    className="text-brand-gold hover:text-brand-gold-light text-xs font-semibold px-2 py-1 rounded hover:bg-brand-gold/10 disabled:opacity-40 transition-colors border border-yellow-900/40">
+                                                                    {escrowLoadingId === loan.id ? '…' : '🏪 Sweep to Shop'}
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        <button onClick={() => setConfirmDelete({ type: 'loan', id: loan.id, label: loan.nftName || loan.nft?.name || 'loan' })}
+                                                            className="text-red-500 hover:text-red-400 text-xs font-semibold px-2 py-1 rounded hover:bg-red-900/20 transition-colors">
+                                                            Delete
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
