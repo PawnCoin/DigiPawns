@@ -65,6 +65,9 @@ export interface ShopItem {
     sellerUsername?: string;
     originalLoanId?: string;
     listedAt: string;
+    /** Admin must explicitly approve before the item is visible in the public shop.
+     *  Defaults to true for admin-added items, false for user-sold/liquidated/traded-in. */
+    approved?: boolean;
 }
 
 export interface NotificationSettings {

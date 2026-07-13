@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useAppContext } from '../contexts/AppContext';
-import { PLACEHOLDER_SHOP_ITEMS } from '../mock-data';
 import { NFT_CATEGORIES } from '../constants';
 import ShopItemCard from '../components/shop/ShopItemCard';
 import SellToShopPanel from '../components/shop/SellToShopPanel';
@@ -19,33 +18,35 @@ const ShopPage: React.FC = () => {
     const [tradeItem, setTradeItem] = useState<ShopItem | null>(null);
     const [buyingId, setBuyingId] = useState<string | null>(null);
 
-    // The shop floor always shows something to browse, even before any real listings exist —
-    // same fallback convention used for the homepage's featured collections.
-    const usingPlaceholders = shopInventory.length === 0;
-    const displayItems = usingPlaceholders ? PLACEHOLDER_SHOP_ITEMS : shopInventory;
+    // Suspect image patterns that should never appear on the public storefront
+    const isSuspectImageUrl = (url: string) =>
+        !url || url.includes('i.seadn.io') || url.includes('picsum.photos') || url.includes('placehold.co');
+
+    // Only admin-approved items with non-suspect image URLs reach buyers.
+    // Items from user sells, liquidations, and trade-ins start unapproved until admin
+    // explicitly OKs them from the Admin Panel.
+    const approvedInventory = shopInventory.filter(
+        item => item.approved === true && !isSuspectImageUrl(item.imageUrl)
+    );
 
     const filteredItems = useMemo(() => {
-        return displayItems.filter(item => {
+        return approvedInventory.filter(item => {
             const matchesCategory = category === 'All' || item.category === category;
             const matchesSearch = !search ||
                 item.name.toLowerCase().includes(search.toLowerCase()) ||
                 item.collection.toLowerCase().includes(search.toLowerCase());
             return matchesCategory && matchesSearch;
         });
-    }, [displayItems, category, search]);
-
-    const PLACEHOLDER_MSG = 'This is a sample listing. Real inventory appears when loans are forfeited or admins add items.';
+    }, [approvedInventory, category, search]);
 
     const handleBuy = async (item: ShopItem) => {
         if (!isConnected) { connectWallet(); return; }
-        if (usingPlaceholders) { toast.info(PLACEHOLDER_MSG); return; }
         setBuyingId(item.id);
         try { await buyShopItem(item.id); } finally { setBuyingId(null); }
     };
 
     const handleTrade = (item: ShopItem) => {
         if (!isConnected) { connectWallet(); return; }
-        if (usingPlaceholders) { toast.info(PLACEHOLDER_MSG); return; }
         setTradeItem(item);
     };
 
@@ -80,7 +81,7 @@ const ShopPage: React.FC = () => {
 
                 <div className="mb-8 border-b border-yellow-900/30 pb-4">
                     <nav className="flex flex-wrap gap-2" aria-label="Shop sections">
-                        <TabBtn id="browse" label="Browse & Buy" count={displayItems.length} />
+                        <TabBtn id="browse" label="Browse & Buy" count={approvedInventory.length} />
                         <TabBtn id="sell" label="Sell to Shop" />
                         <TabBtn id="collection" label="My Collection" count={ownedItems.length} />
                     </nav>
@@ -110,7 +111,13 @@ const ShopPage: React.FC = () => {
                                     </div>
                                 </div>
 
-                                {filteredItems.length === 0 ? (
+                                {shopInventory.length === 0 ? (
+                                    <div className="text-center py-20 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40">
+                                        <p className="text-4xl mb-4">🏪</p>
+                                        <p className="text-white font-semibold mb-1">The shop floor is empty</p>
+                                        <p className="text-sm text-gray-500">Items appear here when loans are forfeited or an admin adds them via the Admin Panel.</p>
+                                    </div>
+                                ) : filteredItems.length === 0 ? (
                                     <div className="text-center py-16 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40">
                                         <p className="text-gray-400">No items match your filters.</p>
                                     </div>
@@ -126,9 +133,6 @@ const ShopPage: React.FC = () => {
                                             />
                                         ))}
                                     </div>
-                                )}
-                                {shopInventory.length === 0 && (
-                                    <p className="text-center text-xs text-gray-500 mt-6">(Showing sample floor items — connect your wallet and forfeited loans or shop picks will appear here.)</p>
                                 )}
                             </div>
                         )}

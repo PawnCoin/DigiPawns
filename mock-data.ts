@@ -1,17 +1,4 @@
-import type { Loan, Nft, ShopItem } from './types';
-
-// Fallback shop-floor inventory shown when Firestore's `shopInventory` collection is empty.
-// Mirrors the PLACEHOLDER_COLLECTIONS pattern used for featured collections.
-export const PLACEHOLDER_SHOP_ITEMS: ShopItem[] = [
-    { id: 'seed-1', name: 'CryptoPunk #4521', collection: 'CryptoPunks', imageUrl: 'https://picsum.photos/seed/punk4521/400', category: 'Collectibles', chain: 'Ethereum', price: 185000, source: 'liquidated', listedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'seed-2', name: 'Bored Ape #2091', collection: 'Bored Ape Yacht Club', imageUrl: 'https://picsum.photos/seed/ape2091/400', category: 'Collectibles', chain: 'Ethereum', price: 96000, source: 'liquidated', listedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'seed-3', name: 'Chromie Squiggle #812', collection: 'Art Blocks', imageUrl: 'https://picsum.photos/seed/squiggle812/400', category: 'Art', chain: 'Ethereum', price: 14200, source: 'admin', listedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'seed-4', name: 'Pudgy Penguin #77', collection: 'Pudgy Penguins', imageUrl: 'https://picsum.photos/seed/pudgy77/400', category: 'Collectibles', chain: 'Ethereum', price: 8300, source: 'admin', listedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'seed-5', name: 'Azuki #3345', collection: 'Azuki', imageUrl: 'https://picsum.photos/seed/azuki3345/400', category: 'Art', chain: 'Ethereum', price: 21500, source: 'liquidated', listedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'seed-6', name: 'Sandbox Land Parcel #91', collection: 'The Sandbox', imageUrl: 'https://picsum.photos/seed/sandbox91/400', category: 'Virtual Worlds', chain: 'Ethereum', price: 4200, source: 'admin', listedAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'seed-7', name: 'Doodle #1120', collection: 'Doodles', imageUrl: 'https://picsum.photos/seed/doodle1120/400', category: 'Art', chain: 'Ethereum', price: 6700, source: 'liquidated', listedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString() },
-    { id: 'seed-8', name: 'Sound Session #204', collection: 'Sound.xyz', imageUrl: 'https://picsum.photos/seed/sound204/400', category: 'Music', chain: 'Ethereum', price: 1900, source: 'admin', listedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString() },
-];
+import type { Loan, Nft } from './types';
 
 export const MOCK_LOANS: Loan[] = [
   {

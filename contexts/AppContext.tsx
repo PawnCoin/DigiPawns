@@ -299,6 +299,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             chain: loan.nftChain || 'Ethereum',
             price: Math.round((loan.principal || 0) * 1.15),
             source: 'liquidated',
+            // Liquidated collateral needs admin review before appearing in the public shop —
+            // the NFT image URL may be broken or the item may not be suitable for resale.
+            approved: false,
             originalLoanId: loanId,
             listedAt: new Date().toISOString(),
         });
@@ -342,6 +345,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 name: nft.name, collection: nft.collection, imageUrl: nft.imageUrl,
                 category: nft.category || '', chain: 'Ethereum', price,
                 source: 'user-sold', sellerUid: userId, sellerUsername: profile.username,
+                // User-sold items require admin approval before showing in the public shop.
+                approved: false,
                 listedAt: new Date().toISOString(),
             });
             const currentBalance = profile.balance ?? STARTING_BALANCE;
@@ -366,12 +371,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 category: item.category || '', chain: item.chain || 'Ethereum', price: item.price,
                 source: item.source, listedAt: new Date().toISOString(),
             });
-            // The traded-in NFT becomes new shop floor inventory.
+            // The traded-in NFT becomes new shop floor inventory — pending admin approval.
             const tradeInRef = doc(collection(db, 'shopInventory'));
             batch.set(tradeInRef, {
                 name: offeredNft.name, collection: offeredNft.collection, imageUrl: offeredNft.imageUrl,
                 category: offeredNft.category || '', chain: 'Ethereum', price: item.price,
                 source: 'trade-in', sellerUid: userId, sellerUsername: profile.username,
+                approved: false,
                 listedAt: new Date().toISOString(),
             });
             await batch.commit();
@@ -385,7 +391,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // ── Admin: Shop inventory ──────────────────────────────────────────────────
     const adminAddShopItem = async (item: Omit<ShopItem, 'id' | 'listedAt' | 'source'>) => {
-        await addDoc(collection(db, 'shopInventory'), { ...item, source: 'admin', listedAt: new Date().toISOString() });
+        // Admin-added items are approved by definition — the admin is the one adding them.
+        await addDoc(collection(db, 'shopInventory'), { ...item, source: 'admin', approved: true, listedAt: new Date().toISOString() });
     };
 
     const adminUpdateShopItem = async (id: string, data: Partial<ShopItem>) => {

@@ -24,7 +24,21 @@ const ShopItemCard: React.FC<ShopItemCardProps> = ({ item, onBuy, onTrade, disab
         {/* "glass case" frame */}
         <div className="relative h-48 bg-brand-dark/60 overflow-hidden border-b border-yellow-900/20">
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-white/5 pointer-events-none z-10" />
-            <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <img
+                src={item.imageUrl}
+                alt={item.name}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                onError={(e) => {
+                    const el = e.currentTarget;
+                    el.style.display = 'none';
+                    const fb = el.nextElementSibling as HTMLElement | null;
+                    if (fb) fb.style.display = 'flex';
+                }}
+            />
+            <div className="absolute inset-0 hidden flex-col items-center justify-center bg-brand-dark/90 text-gray-500">
+                <span className="text-3xl">🖼</span>
+                <span className="text-xs mt-1">Image unavailable</span>
+            </div>
             <span className="absolute top-2 left-2 z-20 text-[10px] font-bold uppercase tracking-wide bg-black/60 text-brand-gold-light px-2 py-1 rounded-full border border-brand-gold/30">
                 {SOURCE_LABELS[item.source] || 'On Display'}
             </span>

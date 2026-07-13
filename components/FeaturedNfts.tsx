@@ -15,10 +15,23 @@ const CollectionCard: React.FC<{ col: Collection }> = ({ col }) => (
                     hover:border-brand-gold/50 hover:scale-105 hover:shadow-gold-glow transition-all duration-300">
         <div className="h-44 bg-brand-dark/60 relative overflow-hidden">
             {col.imageUrl ? (
-                <img src={col.imageUrl} alt={col.name} className="w-full h-full object-cover" />
-            ) : (
-                <div className="w-full h-full flex items-center justify-center text-5xl">🖼️</div>
-            )}
+                <img
+                    src={col.imageUrl}
+                    alt={col.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                        const el = e.currentTarget;
+                        el.style.display = 'none';
+                        const fb = el.nextElementSibling as HTMLElement | null;
+                        if (fb) fb.style.display = 'flex';
+                    }}
+                />
+            ) : null}
+            <div className="w-full h-full flex-col items-center justify-center text-gray-600 bg-brand-dark/80"
+                style={{ display: col.imageUrl ? 'none' : 'flex' }}>
+                <span className="text-4xl">🖼️</span>
+                <span className="text-xs mt-2 text-gray-500">Image unavailable</span>
+            </div>
             {col.verified && (
                 <span className="absolute top-2 right-2 bg-brand-gold text-brand-dark text-[10px] font-black px-2 py-0.5 rounded-full">✓ VERIFIED</span>
             )}
@@ -47,21 +60,16 @@ const CollectionCard: React.FC<{ col: Collection }> = ({ col }) => (
     </div>
 );
 
-const PLACEHOLDER_COLLECTIONS: Collection[] = [
-    { id: 'p1', name: 'Bored Ape Yacht Club', description: 'The most iconic NFT collection on Ethereum — 10,000 unique apes.', imageUrl: 'https://i.seadn.io/gae/Ju9CkWtV-1Okvf45wo8UctR-M9He2PjILP0oOvxE89AyiPPGtrR3gysu1Zgy0hjd2xKIgjJJtWIc0ybj4Vd7wv8t3pxDGf6xWd4?auto=format&dpr=1&w=384', chain: 'Ethereum', floorPrice: 12.5, currency: 'ETH', totalItems: 10000, verified: true, website: 'https://boredapeyachtclub.com' },
-    { id: 'p2', name: 'CryptoPunks', description: '10,000 unique collectible characters — the original NFT project.', imageUrl: 'https://i.seadn.io/gae/BdxvLseXcfl57BiuQcQYdJ64v-aI8din7WPk0Pgo3qQFhAUH-B6i-dCqqc_mCkRIzULmwzwecnohLhrcH8A9mpWIZqA7ygc52Sr81hE?auto=format&dpr=1&w=384', chain: 'Ethereum', floorPrice: 45.0, currency: 'ETH', totalItems: 10000, verified: true, website: 'https://cryptopunks.app' },
-    { id: 'p3', name: 'Azuki', description: 'A brand for the metaverse built by the community for the community.', imageUrl: 'https://i.seadn.io/gae/H8jOCJuQokNqGBpkBN5wk1oZwO7LM8bNnrHCaekV2nKjnCqw6UB5oaH8XyNeBDj6Crun_MXNwyd_AVJM?auto=format&dpr=1&w=384', chain: 'Ethereum', floorPrice: 5.8, currency: 'ETH', totalItems: 10000, verified: true, website: 'https://www.azuki.com' },
-    { id: 'p4', name: 'DeGods', description: 'A collection of degenerates, punks, and misfits doing degenerate things.', imageUrl: 'https://i.seadn.io/gcs/files/b57f5ef3d4f0cfc0ee64f9393d46d23e.png?auto=format&dpr=1&w=384', chain: 'Solana', floorPrice: 290, currency: 'SOL', totalItems: 10000, verified: true, website: 'https://degods.com' },
-    { id: 'p5', name: 'Pudgy Penguins', description: 'A collection of 8,888 cute and cuddly penguins taking over the metaverse.', imageUrl: 'https://i.seadn.io/gae/yNi-XdGxsgQCPpqSio4o31ygAV6wURdIdInWRcFIl46UjUQ1eV7BEndGe8L661LC2NfWS9Hox5yt0ai4ey73Cz5QI3rOPTdQs3Kd?auto=format&dpr=1&w=384', chain: 'Ethereum', floorPrice: 8.2, currency: 'ETH', totalItems: 8888, verified: true, website: 'https://www.pudgypenguins.com' },
-    { id: 'p6', name: 'Milady Maker', description: '10,000 generative profile picture NFTs in an aesthetic neochibi style.', imageUrl: 'https://i.seadn.io/gcs/files/6da8742c1fd04b4a0bbdbf50a41a6b64.jpg?auto=format&dpr=1&w=384', chain: 'Ethereum', floorPrice: 3.1, currency: 'ETH', totalItems: 10000, verified: true, website: 'https://miladymaker.net' },
-];
-
 const FeaturedNfts: React.FC = () => {
     const { collections } = useAppContext();
 
-    const displayCollections = collections.length > 0 ? collections : PLACEHOLDER_COLLECTIONS;
-    const row1 = displayCollections.slice(0, Math.ceil(displayCollections.length / 2));
-    const row2 = displayCollections.slice(Math.ceil(displayCollections.length / 2));
+    // Only show admin-curated Firestore collections — no hardcoded placeholders
+    // with hotlink-protected CDN URLs. If admins haven't added any yet, hide the
+    // section so visitors don't see broken images.
+    if (collections.length === 0) return null;
+
+    const row1 = collections.slice(0, Math.ceil(collections.length / 2));
+    const row2 = collections.slice(Math.ceil(collections.length / 2));
     const row2Display = row2.length > 0 ? row2 : row1;
 
     return (
@@ -69,12 +77,10 @@ const FeaturedNfts: React.FC = () => {
             <div className="absolute inset-0 bg-grid-gray-700/20 [mask-image:linear-gradient(to_bottom,white_5%,transparent_50%)] -z-10"></div>
             <div className="max-w-7xl mx-auto text-center px-4 mb-12">
                 <h2 className="text-3xl sm:text-4xl font-bold mb-4">
-                    {collections.length > 0 ? 'Curated' : 'Featured'} <span className="text-brand-gold">NFT Collections</span>
+                    Curated <span className="text-brand-gold">NFT Collections</span>
                 </h2>
                 <p className="text-gray-400 max-w-2xl mx-auto">
-                    {collections.length > 0
-                        ? 'Hand-picked collections accepted as collateral at DigiPawns.'
-                        : 'Popular NFT collections accepted as loan collateral. Admin can curate this list.'}
+                    Hand-picked collections accepted as collateral at DigiPawns.
                 </p>
             </div>
 

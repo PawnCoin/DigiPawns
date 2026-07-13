@@ -8,6 +8,13 @@ import { ESCROW_ADDRESS } from '../services/escrowService';
 
 type AdminTab = 'users' | 'loans' | 'collections' | 'shop';
 
+// Image URLs that are known to hotlink-block or produce non-resellable placeholder content.
+const isSuspectImageUrl = (url: string) =>
+    !url ||
+    url.includes('i.seadn.io') ||
+    url.includes('picsum.photos') ||
+    url.includes('placehold.co');
+
 const LOAN_STATUSES = ['Active', 'Repaid', 'Defaulted', 'Liquidated'];
 const TRANSFER_STATUSES = ['awaiting_transfer', 'received', 'active', 'returned', 'liquidated'];
 const NFT_CHAINS = ['Ethereum', 'Solana', 'Polygon', 'BNB Chain', 'Avalanche'];
@@ -407,6 +414,12 @@ const AdminPage: React.FC = () => {
                                                     ? <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
                                                     : <div className="w-full h-full flex items-center justify-center text-gray-600 text-4xl">🖼️</div>}
                                                 <span className="absolute top-2 right-2 bg-brand-gold text-brand-dark text-[10px] font-black px-2 py-0.5 rounded-full">{item.source.replace('-', ' ').toUpperCase()}</span>
+                                                {isSuspectImageUrl(item.imageUrl) && (
+                                                    <span title="Image may be hotlink-protected or a placeholder — update the URL before selling"
+                                                        className="absolute top-2 left-2 bg-yellow-500/90 text-black text-[10px] font-black px-1.5 py-0.5 rounded-full">
+                                                        ⚠️ Bad image
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="p-4">
                                                 <h4 className="font-bold text-white">{item.name}</h4>
@@ -416,6 +429,17 @@ const AdminPage: React.FC = () => {
                                                     <span className="text-gray-500 text-xs">{item.chain}</span>
                                                 </div>
                                                 <div className="flex gap-2 mt-3">
+                                                    <button
+                                                        onClick={() => adminUpdateShopItem(item.id, { approved: !item.approved })}
+                                                        className={`flex-1 text-xs py-1.5 rounded border font-bold transition-colors ${
+                                                            item.approved
+                                                                ? 'border-green-700/40 text-green-400 hover:bg-red-900/20 hover:text-red-400 hover:border-red-700/40'
+                                                                : 'border-yellow-700/40 text-yellow-400 hover:bg-green-900/20 hover:text-green-400 hover:border-green-700/40'
+                                                        }`}
+                                                        title={item.approved ? 'Click to hide from shop' : 'Click to approve for shop'}
+                                                    >
+                                                        {item.approved ? '✓ Approved' : '⏳ Approve'}
+                                                    </button>
                                                     <button onClick={() => { setShopItemForm({ name: item.name, collection: item.collection, imageUrl: item.imageUrl, category: item.category || 'Art', chain: item.chain || 'Ethereum', price: item.price }); setEditingShopItem(item.id); setShowShopItemForm(true); }}
                                                         className="flex-1 text-xs py-1.5 rounded border border-yellow-900/40 text-gray-300 hover:text-brand-gold hover:border-brand-gold/40 transition-colors">Edit</button>
                                                     <button onClick={() => setConfirmDelete({ type: 'shopItem', id: item.id, label: item.name })}
