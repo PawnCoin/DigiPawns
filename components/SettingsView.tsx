@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MOCK_LINKED_WALLETS } from '../mock-data';
-import { PlusIcon, TrashIcon } from './IconComponents';
-import type { Nft, LinkedWallet } from '../types';
+import { WalletIcon } from './IconComponents';
+import type { Nft } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 import { fetchNftsForWallet } from '../services/nftService';
-import { formatDistanceToNow } from 'date-fns';
 
 const NftGridItem: React.FC<{ nft: Nft; onAppraise: () => void }> = ({ nft, onAppraise }) => (
     <div className="bg-brand-dark/60 rounded-lg overflow-hidden border border-yellow-900/30 group transition-all duration-300 hover:border-brand-gold/60 hover:shadow-lg">
@@ -37,31 +35,15 @@ const NftGridSkeleton: React.FC = () => (
 
 
 const SettingsView: React.FC = () => {
-    const { navigate, walletAddress } = useAppContext();
-    
-    const [primaryWallet, setPrimaryWallet] = useState<LinkedWallet | null>(null);
-    const [linkedWallets, setLinkedWallets] = useState<LinkedWallet[]>(MOCK_LINKED_WALLETS);
-    
-    const [newWalletAddress, setNewWalletAddress] = useState('');
-    const [isAddingWallet, setIsAddingWallet] = useState(false);
-    const [addWalletError, setAddWalletError] = useState('');
-    
-    const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(walletAddress);
+    const { navigate, walletAddress, isWalletConnected, isConnectingWallet, isCorrectChain, chainName, connectRealWallet, disconnectChainWallet } = useAppContext();
+
     const [portfolio, setPortfolio] = useState<{ nfts: Nft[], isLoading: boolean, error: string | null }>({
         nfts: [],
         isLoading: true,
         error: null,
     });
-    
+
     const [searchTerm, setSearchTerm] = useState('');
-
-    useEffect(() => {
-        if(walletAddress) {
-            setPrimaryWallet({ address: walletAddress, lastActive: new Date().toISOString() });
-            setSelectedWalletAddress(walletAddress);
-        }
-    }, [walletAddress]);
-
 
     const loadNftsForWallet = useCallback(async (address: string | null) => {
         if (!address) return;
@@ -76,27 +58,13 @@ const SettingsView: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        loadNftsForWallet(selectedWalletAddress);
-    }, [selectedWalletAddress, loadNftsForWallet]);
-    
-    const filteredNfts = portfolio.nfts.filter(nft => 
-        nft.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        loadNftsForWallet(walletAddress);
+    }, [walletAddress, loadNftsForWallet]);
+
+    const filteredNfts = portfolio.nfts.filter(nft =>
+        nft.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         nft.collection.toLowerCase().includes(searchTerm.toLowerCase())
     );
-
-    const handleSelectWallet = (address: string) => {
-        setSelectedWalletAddress(address);
-        const now = new Date().toISOString();
-        if (primaryWallet && address === primaryWallet.address) {
-            setPrimaryWallet(prev => prev ? { ...prev, lastActive: now } : null);
-        } else {
-            setLinkedWallets(prevWallets =>
-                prevWallets.map(wallet =>
-                    wallet.address === address ? { ...wallet, lastActive: now } : wallet
-                )
-            );
-        }
-    };
 
     const handleAppraiseClick = (nft: Nft) => {
         navigate('/');
@@ -112,7 +80,7 @@ const SettingsView: React.FC = () => {
                 contractInput.dispatchEvent(event);
                 tokenInput.dispatchEvent(event);
             }
-            
+
             if (appraiseSection) {
                 const headerOffset = 80;
                 const elementPosition = appraiseSection.getBoundingClientRect().top;
@@ -122,31 +90,9 @@ const SettingsView: React.FC = () => {
         }, 100);
     };
 
-    const handleAddWallet = () => {
-        if (!/^0x[a-fA-F0-9]{40}$/.test(newWalletAddress)) {
-            setAddWalletError('Please enter a valid wallet address.');
-            return;
-        }
-        if (linkedWallets.some(w => w.address === newWalletAddress) || (primaryWallet && primaryWallet.address === newWalletAddress)) {
-            setAddWalletError('This wallet is already connected.');
-            return;
-        }
-        setLinkedWallets([...linkedWallets, { address: newWalletAddress, lastActive: new Date().toISOString() }]);
-        setNewWalletAddress('');
-        setIsAddingWallet(false);
-        setAddWalletError('');
-    };
-
-    const handleRemoveWallet = (addressToRemove: string) => {
-        setLinkedWallets(linkedWallets.filter(wallet => wallet.address !== addressToRemove));
-        if(selectedWalletAddress === addressToRemove && primaryWallet){
-            handleSelectWallet(primaryWallet.address);
-        }
-    };
-
     const renderPortfolioContent = () => {
         if (!walletAddress) {
-             return <div className="text-center py-16 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40"><p className="text-gray-400">Please connect your wallet to view your assets.</p></div>
+             return <div className="text-center py-16 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40"><p className="text-gray-400">Connect a wallet to view your assets.</p></div>
         }
         if (portfolio.isLoading) {
             return <NftGridSkeleton />;
@@ -163,7 +109,6 @@ const SettingsView: React.FC = () => {
             return (
                 <div className="text-center py-16 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40">
                     <p className="text-gray-400">No NFTs found in this wallet.</p>
-                    <p className="text-sm text-gray-500 mt-1">(AI-generated for demonstration)</p>
                 </div>
             );
         }
@@ -181,54 +126,52 @@ const SettingsView: React.FC = () => {
             </div>
         )
     };
-    
+
     const shortenAddress = (address: string) => `${address.substring(0,6)}...${address.substring(address.length - 4)}`;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 bg-brand-navy p-6 rounded-lg border border-yellow-900/40 h-fit">
-                <h3 className="font-semibold text-lg text-white mb-4">Connected Wallets</h3>
-                <div className="space-y-2">
-                    {primaryWallet && (
-                         <button onClick={() => handleSelectWallet(primaryWallet.address)} className={`w-full p-3 rounded-md transition-colors text-left ${selectedWalletAddress === primaryWallet.address ? 'bg-yellow-900/30' : 'bg-brand-dark/50 hover:bg-brand-dark/80'}`}>
-                             <div className="flex items-center justify-between">
-                                <div>
-                                    <span className="font-mono text-sm text-brand-gold">{shortenAddress(primaryWallet.address)}</span>
-                                    <span className="ml-3 text-xs bg-brand-gold/20 text-brand-gold px-2 py-0.5 rounded-full">Primary</span>
-                                </div>
-                             </div>
-                             <p className="text-xs text-gray-400 mt-1">Last active: {formatDistanceToNow(new Date(primaryWallet.lastActive), { addSuffix: true })}</p>
+                <h3 className="font-semibold text-lg text-white mb-4">Connected Wallet</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                    This links a real wallet on {chainName} (testnet) — no manual address entry, so what you see here always reflects an actual on-chain connection.
+                </p>
+                {isWalletConnected && walletAddress ? (
+                    <div className="space-y-3">
+                        <div className={`w-full p-3 rounded-md ${isCorrectChain ? 'bg-green-900/20 border border-green-700/40' : 'bg-red-900/20 border border-red-700/40'}`}>
+                            <div className="flex items-center justify-between">
+                                <span className="font-mono text-sm text-brand-gold">{shortenAddress(walletAddress)}</span>
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${isCorrectChain ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                                    {isCorrectChain ? chainName : 'Wrong Network'}
+                                </span>
+                            </div>
+                            {!isCorrectChain && (
+                                <p className="text-xs text-red-400 mt-2">Switch your wallet to {chainName} to use this connection.</p>
+                            )}
+                        </div>
+                        <button onClick={disconnectChainWallet} className="w-full text-sm text-gray-400 hover:text-red-400 border border-yellow-900/30 hover:border-red-700/40 rounded-md py-2 transition-colors">
+                            Disconnect Wallet
                         </button>
-                    )}
-                    {linkedWallets.map(wallet => (
-                        <div key={wallet.address} className={`flex items-center justify-between rounded-md group ${selectedWalletAddress === wallet.address ? 'bg-yellow-900/30' : 'bg-brand-dark/50 hover:bg-brand-dark/80'}`}>
-                            <button onClick={() => handleSelectWallet(wallet.address)} className="flex-grow p-3 text-left">
-                                <span className="font-mono text-sm text-gray-400">{shortenAddress(wallet.address)}</span>
-                                <p className="text-xs text-gray-500 mt-1">Last active: {formatDistanceToNow(new Date(wallet.lastActive), { addSuffix: true })}</p>
-                            </button>
-                            <button onClick={() => handleRemoveWallet(wallet.address)} className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity px-3"><TrashIcon className="w-4 h-4" /></button>
-                        </div>
-                    ))}
-                </div>
-                {isAddingWallet ? (
-                    <div className="mt-4">
-                        <input type="text" value={newWalletAddress} onChange={(e) => { setNewWalletAddress(e.target.value); setAddWalletError(''); }} className="w-full bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-gold/60 font-mono text-sm text-white placeholder-gray-600" placeholder="Enter new wallet address (0x...)" />
-                        {addWalletError && <p className="text-red-400 text-xs mt-1">{addWalletError}</p>}
-                        <div className="flex justify-end space-x-2 mt-2">
-                            <button onClick={() => setIsAddingWallet(false)} className="text-gray-400 text-sm hover:text-white px-3 py-1">Cancel</button>
-                            <button onClick={handleAddWallet} className="bg-brand-gold text-brand-dark font-semibold text-sm px-4 py-1.5 rounded-md hover:bg-brand-gold-light">Add</button>
-                        </div>
                     </div>
                 ) : (
-                    <button onClick={() => setIsAddingWallet(true)} className="mt-4 w-full flex items-center justify-center space-x-2 text-brand-gold border-2 border-dashed border-yellow-900/40 hover:border-brand-gold/60 hover:bg-brand-gold/10 rounded-lg py-3 transition-colors">
-                        <PlusIcon className="w-5 h-5" />
-                        <span>Link New Wallet</span>
+                    <button
+                        onClick={connectRealWallet}
+                        disabled={isConnectingWallet}
+                        className="w-full flex items-center justify-center space-x-2 text-brand-gold border-2 border-dashed border-yellow-900/40 hover:border-brand-gold/60 hover:bg-brand-gold/10 rounded-lg py-3 transition-colors disabled:opacity-50"
+                    >
+                        <WalletIcon className="w-5 h-5" />
+                        <span>{isConnectingWallet ? 'Connecting…' : 'Connect Wallet'}</span>
                     </button>
                 )}
             </div>
             <div className="lg:col-span-2">
+                {walletAddress && (
+                    <div className="mb-3 text-xs text-yellow-500/80 bg-yellow-900/10 border border-yellow-900/30 rounded-md px-3 py-2">
+                        Wallet connection above is real. This NFT list is still simulated (AI-generated) — real on-chain NFT indexing is a planned next phase.
+                    </div>
+                )}
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-4">
-                    <h3 className="font-semibold text-lg text-white mb-2 sm:mb-0">Assets in <span className="font-mono text-brand-gold">{selectedWalletAddress ? shortenAddress(selectedWalletAddress) : 'No Wallet Selected'}</span></h3>
+                    <h3 className="font-semibold text-lg text-white mb-2 sm:mb-0">Assets in <span className="font-mono text-brand-gold">{walletAddress ? shortenAddress(walletAddress) : 'No Wallet Connected'}</span></h3>
                     <div className="w-full sm:w-auto">
                          <input
                             type="text"

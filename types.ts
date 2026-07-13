@@ -37,11 +37,6 @@ export interface Loan {
   createdAt?: string;
 }
 
-export interface LinkedWallet {
-    address: string;
-    lastActive: string;
-}
-
 export interface UserProfile {
     uid?: string;
     username: string;
@@ -175,6 +170,10 @@ export interface AppContextType {
   isAdmin: boolean;
   userId: string | null;
   walletAddress: string | null;
+  isWalletConnected: boolean;
+  isConnectingWallet: boolean;
+  isCorrectChain: boolean;
+  chainName: string;
   loans: Loan[];
   profile: UserProfile;
   notificationSettings: NotificationSettings;
@@ -191,6 +190,8 @@ export interface AppContextType {
   navigate: (path: string) => void;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
+  connectRealWallet: () => Promise<void>;
+  disconnectChainWallet: () => void;
 
   // Loan actions
   addLoan: (loan: Loan) => void;

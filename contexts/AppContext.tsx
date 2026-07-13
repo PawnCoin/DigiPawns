@@ -8,6 +8,8 @@ import {
     collection, doc, setDoc, onSnapshot, query, where,
     deleteDoc, getDocs, limit, addDoc, writeBatch
 } from 'firebase/firestore';
+import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
+import { TARGET_CHAIN } from '../lib/web3';
 
 const STARTING_BALANCE = 25000;
 
@@ -26,7 +28,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [userId, setUserId] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [walletAddress, setWalletAddress] = useState<string | null>(null);
     const [loans, setLoans] = useState<Loan[]>([]);
     const [profile, setProfile] = useState<UserProfile>({ username: 'Digital Voyager', avatarNftUrl: null });
     const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({ loanDueSoon: true, repaymentSuccess: true, loanDefaulted: true });
@@ -38,6 +39,44 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [allLoans, setAllLoans] = useState<Loan[]>([]);
     const [shopInventory, setShopInventory] = useState<ShopItem[]>([]);
     const [ownedItems, setOwnedItems] = useState<ShopItem[]>([]);
+
+    // ── Real Web3 wallet (Base Sepolia testnet) ─────────────────────────────────
+    // This is a genuine on-chain wallet connection (MetaMask, etc.) — the address
+    // below comes straight from the browser wallet, not from typed-in or
+    // AI-generated data. It is the source of truth for `walletAddress`.
+    const { address: chainAddress, isConnected: isWalletConnected, connector: activeConnector } = useAccount();
+    const { connectAsync, connectors, isPending: isConnectingWallet } = useConnect();
+    const { disconnect: disconnectChainWallet } = useDisconnect();
+    const chainId = useChainId();
+    const { switchChainAsync } = useSwitchChain();
+    const isCorrectChain = isWalletConnected && chainId === TARGET_CHAIN.id;
+
+    const connectRealWallet = useCallback(async () => {
+        try {
+            const injectedConnector = connectors.find(c => c.id === 'injected') || connectors[0];
+            if (!injectedConnector) {
+                toast.error('No browser wallet found. Install MetaMask to connect a real wallet.');
+                return;
+            }
+            const result = await connectAsync({ connector: injectedConnector });
+            if (result.chainId !== TARGET_CHAIN.id) {
+                try { await switchChainAsync({ chainId: TARGET_CHAIN.id }); }
+                catch { toast.error(`Please switch your wallet to ${TARGET_CHAIN.name} manually.`); }
+            }
+            toast.success('Wallet connected.');
+        } catch (err) {
+            toast.error('Wallet connection was rejected or failed.');
+        }
+    }, [connectAsync, connectors, switchChainAsync]);
+
+    // Persist the real connected address onto the signed-in user's profile so
+    // friends/admin views (which read from Firestore, not live wagmi state) can
+    // still see it.
+    useEffect(() => {
+        if (userId && chainAddress) {
+            setDoc(doc(db, 'users', userId), { walletAddress: chainAddress }, { merge: true }).catch(console.error);
+        }
+    }, [userId, chainAddress]);
 
     // ── Firebase Auth ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -86,7 +125,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             if (snap.exists()) {
                 const data = snap.data() as UserProfile;
                 setProfile(data);
-                setWalletAddress(data.walletAddress || null);
                 setIsAdmin(data.isAdmin === true);
             } else {
                 const defaultProfile: UserProfile = {
@@ -188,6 +226,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [userId]);
 
     // ── Auth ───────────────────────────────────────────────────────────────────
+    // Signing in (Firebase) creates your DigiPawns account — profile, loans,
+    // friends, admin access. Connecting a wallet (below) links a *real* on-chain
+    // address to that account; they're separate steps on purpose.
     const connectWallet = useCallback(async () => {
         try {
             await signInWithPopup(auth, new GoogleAuthProvider());
@@ -199,7 +240,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try {
             await signOut(auth);
             setIsConnected(false);
-            setWalletAddress(null);
             navigate('/');
         } catch { console.error('Sign out failed'); }
     }, [navigate]);
@@ -434,11 +474,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await deleteDoc(doc(db, 'collections', id));
     };
 
+    // `walletAddress` is the real connected on-chain address when a wallet is
+    // linked; it falls back to whatever was last saved on the profile (e.g. on
+    // first paint before wagmi's auto-reconnect resolves).
+    const walletAddress = chainAddress ?? profile.walletAddress ?? null;
+
     const value: AppContextType = {
         isConnected, isAdmin, userId, walletAddress, loans, profile,
         notificationSettings, activityLog, friends, messages, collections,
         allUsers, allLoans, shopInventory, ownedItems,
-        navigate, connectWallet, disconnectWallet,
+        isWalletConnected, isConnectingWallet, isCorrectChain, chainName: TARGET_CHAIN.name,
+        navigate, connectWallet, disconnectWallet, connectRealWallet, disconnectChainWallet,
         addLoan, repayLoan, liquidateLoan,
         buyShopItem, sellNftToShop, tradeInForItem,
         adminAddShopItem, adminUpdateShopItem, adminDeleteShopItem,

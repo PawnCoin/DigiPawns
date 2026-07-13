@@ -1,39 +1,14 @@
 ---
-name: DigiPawns Architecture
-description: Key data model, admin detection, social features, NFT transfer flow, and Firebase rules approach
+name: DigiPawns architecture
+description: Key data collections, admin detection, social messaging approach, NFT transfer flow, and Web3 wallet setup
 ---
 
-## Firestore Collections
-- `users/{uid}` — UserProfile, includes `isAdmin: boolean`, `bio`, `walletAddress`
-- `loans/{loanId}` — Loan, includes `nftTransferStatus` ('awaiting_transfer'|'received'|'active'|'returned'|'liquidated')
-- `activities/{id}` — activity log per user
-- `notificationSettings/{uid}` — user notification prefs
-- `friends/{uid}_{friendUid}` — bidirectional (both directions written on add, both deleted on remove)
-- `messages/{id}` — `{conversationId, fromUid, fromUsername, toUid, text, timestamp, read}`; `conversationId = [uid1,uid2].sort().join('_')`
-- `collections/{id}` — admin-curated NFT collections; public read, admin-only write
+## Firestore collections
+Users, loans (with `status`/`nftTransferStatus`), friends, messages, activities, notificationSettings, collections, shopInventory, ownedItems. Admin is a boolean flag on the user profile, not a separate role table. Firestore security rules live in `firestore.rules` and must be pasted manually into the Firebase Console by the user — the repo copy is not auto-deployed.
 
-## Admin Detection
-`isAdmin: boolean` field on user doc in Firestore. Set first admin manually in Firebase console.
-Firestore rules use `get(/databases/.../users/$(request.auth.uid)).data.get('isAdmin', false) == true`.
+## Real Web3 wallet layer (added; testnet-only)
+Wallet connection uses wagmi v2 + viem v2 (NOT the wagmi v3 latest — v3 requires `typescript>=5.9.3` and conflicts with this project's pinned TS, causing an ERESOLVE npm error). Configured for Base Sepolia via an injected/MetaMask connector in `lib/web3.ts`, wired up with `WagmiProvider`+`QueryClientProvider` in `index.tsx`.
 
-## Firestore Rules
-Rules are in `firestore.rules` but need to be deployed manually via Firebase console (no firebase.json/CLI configured).
-**Why:** Firebase CLI not set up in Replit env; user must paste rules into Firebase Console → Firestore → Rules tab.
+**Why:** the app originally faked all Web3 (wallet address was a free-text Firestore field, "NFTs" were Gemini-hallucinated, no chain interaction existed). The user explicitly rejected fake Web3 and asked for it to be real, starting on testnet.
 
-## Social Messaging
-Two Firestore listeners: one for `toUid == userId`, one for `fromUid == userId`. Merged in state deduped by message id.
-**Why:** Firestore doesn't support OR across different fields without composite indexes.
-
-## NFT Transfer Flow
-Loans created with `nftTransferStatus: 'awaiting_transfer'`. Admin toggles it per loan in AdminPage.
-Real on-chain transfer would require a smart contract (Solidity/Rust) — not yet built. Current flow is manual admin confirmation.
-
-## Collections Fallback
-FeaturedNfts shows PLACEHOLDER_COLLECTIONS (hardcoded 6 real NFT collections) if Firestore `collections` is empty.
-Admin can add/edit/delete via AdminPage → Collections tab to override placeholders.
-
-## User Search
-Uses Firestore prefix query: `where('username', '>=', q), where('username', '<=', q + '\uf8ff')` — requires username to be lowercase-consistent for best results.
-
-## Setup Notes
-Needs `GEMINI_API_KEY` secret (used for appraisals/portfolio simulation) and Firebase already configured via `firebase-applet-config.json`. `npm run dev` on port 5000. `index.html` has a leftover AI-Studio-scaffold `<script type="importmap">` pointing at aistudiocdn.com — dead code under Vite, safe to ignore/remove.
+**How to apply:** Firebase auth (`isConnected`) remains the "app account" layer (profile/social/admin gating) — kept separate from the real on-chain wallet (`isWalletConnected`/`walletAddress` in `AppContext`, sourced from wagmi's `useAccount`, not user-typed text). Any future Web3 work (real NFT indexing via Alchemy, an escrow smart contract for loan collateral, on-chain shop transfers) should follow this same "testnet first, real data only" pattern rather than reintroducing simulated fallbacks — see conversation history for the specific phased plan if resuming this work.

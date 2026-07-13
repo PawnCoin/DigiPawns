@@ -4,7 +4,10 @@ import { useAppContext } from '../contexts/AppContext';
 import useRouter from '../hooks/useRouter';
 
 const Header: React.FC = () => {
-  const { isConnected, isAdmin, walletAddress, profile, connectWallet, disconnectWallet, navigate } = useAppContext();
+  const {
+    isConnected, isAdmin, walletAddress, profile, connectWallet, disconnectWallet, navigate,
+    isWalletConnected, isConnectingWallet, isCorrectChain, chainName, connectRealWallet, disconnectChainWallet,
+  } = useAppContext();
   const { route } = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -40,6 +43,7 @@ const Header: React.FC = () => {
 
   const handleDisconnect = () => {
     disconnectWallet();
+    if (isWalletConnected) disconnectChainWallet();
     setIsDropdownOpen(false);
   };
 
@@ -71,6 +75,27 @@ const Header: React.FC = () => {
             <a href="#collections"  onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">Collections</a>
             <a href="#faq"          onClick={handleScrollClick} className="text-gray-400 hover:text-brand-gold transition-colors duration-200">FAQ</a>
           </nav>
+          <div className="flex items-center gap-3">
+            {isConnected && (
+              isWalletConnected ? (
+                <span
+                  title={isCorrectChain ? `Connected to ${chainName}` : `Wrong network — please switch to ${chainName}`}
+                  className={`hidden sm:flex items-center gap-2 font-mono text-xs py-2 px-3 rounded-lg border ${isCorrectChain ? 'border-green-700/50 bg-green-900/20 text-green-400' : 'border-red-700/50 bg-red-900/20 text-red-400'}`}
+                >
+                  <span className={`w-2 h-2 rounded-full ${isCorrectChain ? 'bg-green-400' : 'bg-red-400'}`} />
+                  {formatAddress(walletAddress || '')}
+                </span>
+              ) : (
+                <button
+                  onClick={connectRealWallet}
+                  disabled={isConnectingWallet}
+                  className="hidden sm:flex items-center gap-2 text-xs font-semibold py-2 px-4 rounded-lg border border-yellow-900/50 text-brand-gold hover:border-brand-gold/60 hover:bg-brand-gold/10 transition-colors disabled:opacity-50"
+                >
+                  <WalletIcon className="w-4 h-4" />
+                  {isConnectingWallet ? 'Connecting…' : 'Connect Wallet'}
+                </button>
+              )
+            )}
           <div className="relative" ref={dropdownRef}>
             {isConnected ? (
               <button
@@ -82,7 +107,7 @@ const Header: React.FC = () => {
                 ) : (
                   <WalletIcon className="w-5 h-5 text-brand-gold" />
                 )}
-                <span>{walletAddress ? formatAddress(walletAddress) : profile.username}</span>
+                <span>{profile.username}</span>
               </button>
             ) : (
               <button
@@ -111,6 +136,7 @@ const Header: React.FC = () => {
                 </button>
               </div>
             )}
+          </div>
           </div>
         </div>
       </div>

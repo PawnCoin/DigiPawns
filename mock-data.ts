@@ -1,4 +1,4 @@
-import type { Loan, Nft, LinkedWallet, ShopItem } from './types';
+import type { Loan, Nft, ShopItem } from './types';
 
 // Fallback shop-floor inventory shown when Firestore's `shopInventory` collection is empty.
 // Mirrors the PLACEHOLDER_COLLECTIONS pattern used for featured collections.
@@ -68,16 +68,6 @@ export const MOCK_LOANS: Loan[] = [
   },
 ];
 
-export const MOCK_LINKED_WALLETS: LinkedWallet[] = [
-    { 
-        address: '0xAb5801a7D398351b8bE11C439e05C5B3259aeC9B', 
-        lastActive: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    },
-    { 
-        address: '0x73BCEb1Cd57C711feaC4224D062b0F6ff338501e',
-        lastActive: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
-    }
-];
 
 // FIX: Defined and exported MOCK_PORTFOLIO_NFTS to provide mock data for the dashboard.
 export const MOCK_PORTFOLIO_NFTS: { [key: string]: Nft[] } = {
