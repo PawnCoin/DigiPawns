@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Collection, Loan, UserProfile, ShopItem } from '../types';
 import { toast } from 'sonner';
 import { useEscrowAdmin } from '../hooks/useEscrow';
 import { ESCROW_ADDRESS } from '../services/escrowService';
+import { uploadImage, sanitiseFilename } from '../services/storageService';
 
 type AdminTab = 'users' | 'loans' | 'collections' | 'shop';
 
@@ -43,7 +44,41 @@ const AdminPage: React.FC = () => {
     const [showShopItemForm, setShowShopItemForm] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState<{ type: string; id: string; label: string } | null>(null);
     const [escrowLoadingId, setEscrowLoadingId] = useState<string | null>(null);
+    const [colUploadPct, setColUploadPct] = useState<number | null>(null);
+    const [shopUploadPct, setShopUploadPct] = useState<number | null>(null);
+    const colFileRef = useRef<HTMLInputElement>(null);
+    const shopFileRef = useRef<HTMLInputElement>(null);
     const { releaseToOwner, sweepToShop, escrowReady } = useEscrowAdmin();
+
+    const handleColImageUpload = async (file: File) => {
+        const tempId = editingCollection || `new_${Date.now()}`;
+        const path = `collections/${tempId}/${sanitiseFilename(file.name)}`;
+        setColUploadPct(0);
+        try {
+            const url = await uploadImage(file, path, setColUploadPct);
+            setCollectionForm(f => ({ ...f, imageUrl: url }));
+            toast.success('Image uploaded');
+        } catch {
+            toast.error('Image upload failed');
+        } finally {
+            setColUploadPct(null);
+        }
+    };
+
+    const handleShopImageUpload = async (file: File) => {
+        const tempId = editingShopItem || `new_${Date.now()}`;
+        const path = `shopItems/${tempId}/${sanitiseFilename(file.name)}`;
+        setShopUploadPct(0);
+        try {
+            const url = await uploadImage(file, path, setShopUploadPct);
+            setShopItemForm(f => ({ ...f, imageUrl: url }));
+            toast.success('Image uploaded');
+        } catch {
+            toast.error('Image upload failed');
+        } finally {
+            setShopUploadPct(null);
+        }
+    };
 
     if (!isAdmin) {
         return (
@@ -308,7 +343,7 @@ const AdminPage: React.FC = () => {
                                     <div className="mb-6 p-6 rounded-xl border border-brand-gold/30 bg-brand-navy/60">
                                         <h3 className="font-bold text-white mb-4">{editingCollection ? 'Edit Collection' : 'New Collection'}</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {([['name', 'Collection Name', 'text'], ['description', 'Description', 'text'], ['imageUrl', 'Image URL', 'text'], ['website', 'Website URL', 'text'], ['floorPrice', 'Floor Price', 'number'], ['totalItems', 'Total Items', 'number'], ['currency', 'Currency (ETH/SOL)', 'text']] as [keyof typeof collectionForm, string, string][]).map(([field, label, type]) => (
+                                            {([['name', 'Collection Name', 'text'], ['description', 'Description', 'text'], ['website', 'Website URL', 'text'], ['floorPrice', 'Floor Price', 'number'], ['totalItems', 'Total Items', 'number'], ['currency', 'Currency (ETH/SOL)', 'text']] as [keyof typeof collectionForm, string, string][]).map(([field, label, type]) => (
                                                 <div key={field}>
                                                     <label className="block text-xs text-gray-400 mb-1">{label}</label>
                                                     <input type={type} value={(collectionForm as any)[field]}
@@ -328,6 +363,34 @@ const AdminPage: React.FC = () => {
                                                 <input type="checkbox" checked={collectionForm.verified}
                                                     onChange={e => setCollectionForm(f => ({ ...f, verified: e.target.checked }))}
                                                     className="accent-brand-gold w-4 h-4" />
+                                            </div>
+                                            {/* Image upload — spans full width */}
+                                            <div className="sm:col-span-2">
+                                                <label className="block text-xs text-gray-400 mb-1">Collection Image</label>
+                                                <div className="flex gap-3 items-start">
+                                                    {/* Preview */}
+                                                    <div className="w-16 h-16 rounded-lg border border-yellow-900/40 bg-brand-dark flex-shrink-0 overflow-hidden">
+                                                        {collectionForm.imageUrl
+                                                            ? <img src={collectionForm.imageUrl} alt="preview" className="w-full h-full object-cover" />
+                                                            : <div className="w-full h-full flex items-center justify-center text-gray-600 text-2xl">🖼️</div>}
+                                                    </div>
+                                                    <div className="flex-1 flex flex-col gap-2">
+                                                        {/* File picker */}
+                                                        <input ref={colFileRef} type="file" accept="image/*" className="hidden"
+                                                            onChange={e => { const f = e.target.files?.[0]; if (f) handleColImageUpload(f); }} />
+                                                        <button type="button"
+                                                            disabled={colUploadPct !== null}
+                                                            onClick={() => colFileRef.current?.click()}
+                                                            className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
+                                                            {colUploadPct !== null ? `Uploading… ${colUploadPct}%` : '📁 Upload image'}
+                                                        </button>
+                                                        {/* URL fallback */}
+                                                        <input type="text" placeholder="or paste image URL"
+                                                            value={collectionForm.imageUrl}
+                                                            onChange={e => setCollectionForm(f => ({ ...f, imageUrl: e.target.value }))}
+                                                            className="w-full bg-brand-dark border border-yellow-900/40 rounded px-3 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-brand-gold/40" />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex gap-3 mt-4">
@@ -383,7 +446,7 @@ const AdminPage: React.FC = () => {
                                     <div className="mb-6 p-6 rounded-xl border border-brand-gold/30 bg-brand-navy/60">
                                         <h3 className="font-bold text-white mb-4">{editingShopItem ? 'Edit Item' : 'New Shop Item'}</h3>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {([['name', 'Item Name', 'text'], ['collection', 'Collection', 'text'], ['imageUrl', 'Image URL', 'text'], ['category', 'Category', 'text'], ['price', 'Price (USD)', 'number']] as [keyof typeof shopItemForm, string, string][]).map(([field, label, type]) => (
+                                            {([['name', 'Item Name', 'text'], ['collection', 'Collection', 'text'], ['category', 'Category', 'text'], ['price', 'Price (USD)', 'number']] as [keyof typeof shopItemForm, string, string][]).map(([field, label, type]) => (
                                                 <div key={field}>
                                                     <label className="block text-xs text-gray-400 mb-1">{label}</label>
                                                     <input type={type} value={(shopItemForm as any)[field]}
@@ -397,6 +460,34 @@ const AdminPage: React.FC = () => {
                                                     className="w-full bg-brand-dark border border-yellow-900/40 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-brand-gold/40">
                                                     {NFT_CHAINS.map(c => <option key={c} value={c}>{c}</option>)}
                                                 </select>
+                                            </div>
+                                            {/* Image upload — spans full width */}
+                                            <div className="sm:col-span-2">
+                                                <label className="block text-xs text-gray-400 mb-1">Item Image</label>
+                                                <div className="flex gap-3 items-start">
+                                                    {/* Preview */}
+                                                    <div className="w-16 h-16 rounded-lg border border-yellow-900/40 bg-brand-dark flex-shrink-0 overflow-hidden">
+                                                        {shopItemForm.imageUrl
+                                                            ? <img src={shopItemForm.imageUrl} alt="preview" className="w-full h-full object-cover" />
+                                                            : <div className="w-full h-full flex items-center justify-center text-gray-600 text-2xl">🖼️</div>}
+                                                    </div>
+                                                    <div className="flex-1 flex flex-col gap-2">
+                                                        {/* File picker */}
+                                                        <input ref={shopFileRef} type="file" accept="image/*" className="hidden"
+                                                            onChange={e => { const f = e.target.files?.[0]; if (f) handleShopImageUpload(f); }} />
+                                                        <button type="button"
+                                                            disabled={shopUploadPct !== null}
+                                                            onClick={() => shopFileRef.current?.click()}
+                                                            className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
+                                                            {shopUploadPct !== null ? `Uploading… ${shopUploadPct}%` : '📁 Upload image'}
+                                                        </button>
+                                                        {/* URL fallback */}
+                                                        <input type="text" placeholder="or paste image URL"
+                                                            value={shopItemForm.imageUrl}
+                                                            onChange={e => setShopItemForm(f => ({ ...f, imageUrl: e.target.value }))}
+                                                            className="w-full bg-brand-dark border border-yellow-900/40 rounded px-3 py-1.5 text-white text-xs focus:outline-none focus:ring-1 focus:ring-brand-gold/40" />
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="flex gap-3 mt-4">
