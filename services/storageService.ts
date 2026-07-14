@@ -1,4 +1,4 @@
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import { storage } from '../firebase';
 
 /**
@@ -42,4 +42,26 @@ export async function uploadImage(
 export function sanitiseFilename(original: string): string {
     const ext = original.includes('.') ? '.' + original.split('.').pop() : '';
     return `cover${ext}`;
+}
+
+/**
+ * Returns true if the URL points to an object in this project's Firebase Storage bucket.
+ */
+export function isStorageUrl(url: string): boolean {
+    return url.includes('firebasestorage.googleapis.com');
+}
+
+/**
+ * Deletes a file from Firebase Storage by its download URL.
+ * Silently succeeds if the object no longer exists.
+ */
+export async function deleteImage(url: string): Promise<void> {
+    if (!url || !isStorageUrl(url)) return;
+    try {
+        const storageRef = ref(storage, url);
+        await deleteObject(storageRef);
+    } catch (err: any) {
+        // object-not-found is fine — already deleted
+        if (err?.code !== 'storage/object-not-found') throw err;
+    }
 }

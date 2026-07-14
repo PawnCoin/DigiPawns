@@ -5,7 +5,7 @@ import type { Collection, Loan, UserProfile, ShopItem } from '../types';
 import { toast } from 'sonner';
 import { useEscrowAdmin } from '../hooks/useEscrow';
 import { ESCROW_ADDRESS } from '../services/escrowService';
-import { uploadImage, sanitiseFilename } from '../services/storageService';
+import { uploadImage, sanitiseFilename, deleteImage, isStorageUrl } from '../services/storageService';
 
 type AdminTab = 'users' | 'loans' | 'collections' | 'shop';
 
@@ -55,6 +55,8 @@ const AdminPage: React.FC = () => {
         const path = `collections/${tempId}/${sanitiseFilename(file.name)}`;
         setColUploadPct(0);
         try {
+            // Upload overwrites the existing object at the same path automatically —
+            // no explicit deletion needed (and deleting would remove the new file too).
             const url = await uploadImage(file, path, setColUploadPct);
             setCollectionForm(f => ({ ...f, imageUrl: url }));
             toast.success('Image uploaded');
@@ -62,6 +64,15 @@ const AdminPage: React.FC = () => {
             toast.error('Image upload failed');
         } finally {
             setColUploadPct(null);
+            if (colFileRef.current) colFileRef.current.value = '';
+        }
+    };
+
+    const handleColImageClear = async () => {
+        const url = collectionForm.imageUrl;
+        setCollectionForm(f => ({ ...f, imageUrl: '' }));
+        if (url && isStorageUrl(url)) {
+            try { await deleteImage(url); } catch { /* best-effort */ }
         }
     };
 
@@ -70,6 +81,8 @@ const AdminPage: React.FC = () => {
         const path = `shopItems/${tempId}/${sanitiseFilename(file.name)}`;
         setShopUploadPct(0);
         try {
+            // Upload overwrites the existing object at the same path automatically —
+            // no explicit deletion needed (and deleting would remove the new file too).
             const url = await uploadImage(file, path, setShopUploadPct);
             setShopItemForm(f => ({ ...f, imageUrl: url }));
             toast.success('Image uploaded');
@@ -77,6 +90,15 @@ const AdminPage: React.FC = () => {
             toast.error('Image upload failed');
         } finally {
             setShopUploadPct(null);
+            if (shopFileRef.current) shopFileRef.current.value = '';
+        }
+    };
+
+    const handleShopImageClear = async () => {
+        const url = shopItemForm.imageUrl;
+        setShopItemForm(f => ({ ...f, imageUrl: '' }));
+        if (url && isStorageUrl(url)) {
+            try { await deleteImage(url); } catch { /* best-effort */ }
         }
     };
 
@@ -369,21 +391,35 @@ const AdminPage: React.FC = () => {
                                                 <label className="block text-xs text-gray-400 mb-1">Collection Image</label>
                                                 <div className="flex gap-3 items-start">
                                                     {/* Preview */}
-                                                    <div className="w-16 h-16 rounded-lg border border-yellow-900/40 bg-brand-dark flex-shrink-0 overflow-hidden">
+                                                    <div className="relative w-16 h-16 rounded-lg border border-yellow-900/40 bg-brand-dark flex-shrink-0 overflow-hidden group">
                                                         {collectionForm.imageUrl
                                                             ? <img src={collectionForm.imageUrl} alt="preview" className="w-full h-full object-cover" />
                                                             : <div className="w-full h-full flex items-center justify-center text-gray-600 text-2xl">🖼️</div>}
+                                                        {collectionForm.imageUrl && (
+                                                            <button type="button" onClick={handleColImageClear} title="Remove image"
+                                                                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all">
+                                                                ✕
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     <div className="flex-1 flex flex-col gap-2">
                                                         {/* File picker */}
                                                         <input ref={colFileRef} type="file" accept="image/*" className="hidden"
                                                             onChange={e => { const f = e.target.files?.[0]; if (f) handleColImageUpload(f); }} />
-                                                        <button type="button"
-                                                            disabled={colUploadPct !== null}
-                                                            onClick={() => colFileRef.current?.click()}
-                                                            className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
-                                                            {colUploadPct !== null ? `Uploading… ${colUploadPct}%` : '📁 Upload image'}
-                                                        </button>
+                                                        <div className="flex gap-2 flex-wrap">
+                                                            <button type="button"
+                                                                disabled={colUploadPct !== null}
+                                                                onClick={() => colFileRef.current?.click()}
+                                                                className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
+                                                                {colUploadPct !== null ? `Uploading… ${colUploadPct}%` : '📁 Upload image'}
+                                                            </button>
+                                                            {collectionForm.imageUrl && (
+                                                                <button type="button" onClick={handleColImageClear}
+                                                                    className="px-3 py-1.5 rounded border border-red-900/40 text-red-400 text-xs font-semibold hover:bg-red-900/20 transition-colors">
+                                                                    ✕ Remove
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                         {/* URL fallback */}
                                                         <input type="text" placeholder="or paste image URL"
                                                             value={collectionForm.imageUrl}
@@ -466,21 +502,35 @@ const AdminPage: React.FC = () => {
                                                 <label className="block text-xs text-gray-400 mb-1">Item Image</label>
                                                 <div className="flex gap-3 items-start">
                                                     {/* Preview */}
-                                                    <div className="w-16 h-16 rounded-lg border border-yellow-900/40 bg-brand-dark flex-shrink-0 overflow-hidden">
+                                                    <div className="relative w-16 h-16 rounded-lg border border-yellow-900/40 bg-brand-dark flex-shrink-0 overflow-hidden group">
                                                         {shopItemForm.imageUrl
                                                             ? <img src={shopItemForm.imageUrl} alt="preview" className="w-full h-full object-cover" />
                                                             : <div className="w-full h-full flex items-center justify-center text-gray-600 text-2xl">🖼️</div>}
+                                                        {shopItemForm.imageUrl && (
+                                                            <button type="button" onClick={handleShopImageClear} title="Remove image"
+                                                                className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-red-600 transition-all">
+                                                                ✕
+                                                            </button>
+                                                        )}
                                                     </div>
                                                     <div className="flex-1 flex flex-col gap-2">
                                                         {/* File picker */}
                                                         <input ref={shopFileRef} type="file" accept="image/*" className="hidden"
                                                             onChange={e => { const f = e.target.files?.[0]; if (f) handleShopImageUpload(f); }} />
-                                                        <button type="button"
-                                                            disabled={shopUploadPct !== null}
-                                                            onClick={() => shopFileRef.current?.click()}
-                                                            className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
-                                                            {shopUploadPct !== null ? `Uploading… ${shopUploadPct}%` : '📁 Upload image'}
-                                                        </button>
+                                                        <div className="flex gap-2 flex-wrap">
+                                                            <button type="button"
+                                                                disabled={shopUploadPct !== null}
+                                                                onClick={() => shopFileRef.current?.click()}
+                                                                className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
+                                                                {shopUploadPct !== null ? `Uploading… ${shopUploadPct}%` : '📁 Upload image'}
+                                                            </button>
+                                                            {shopItemForm.imageUrl && (
+                                                                <button type="button" onClick={handleShopImageClear}
+                                                                    className="px-3 py-1.5 rounded border border-red-900/40 text-red-400 text-xs font-semibold hover:bg-red-900/20 transition-colors">
+                                                                    ✕ Remove
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                         {/* URL fallback */}
                                                         <input type="text" placeholder="or paste image URL"
                                                             value={shopItemForm.imageUrl}
