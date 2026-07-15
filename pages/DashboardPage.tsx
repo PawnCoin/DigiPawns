@@ -13,9 +13,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 type Tab = 'loans' | 'portfolio' | 'profile' | 'activity' | 'friends' | 'messages';
 
 const DashboardPage: React.FC = () => {
-    const { profile, isAdmin, navigate, messages, userId } = useAppContext();
+    const { profile, isAdmin, navigate, messages, userId, isWalletConnected, openWalletPicker } = useAppContext();
     const [activeTab, setActiveTab] = useState<Tab>('loans');
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
+    const [walletNudgeDismissed, setWalletNudgeDismissed] = useState(false);
 
     const unreadCount = messages.filter(m => m.toUid === userId && !m.read).length;
 
@@ -57,6 +58,35 @@ const DashboardPage: React.FC = () => {
             transition={{ duration: 0.3 }}
         >
             <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+                {/* Wallet nudge — shown once until dismissed, only when signed in but no crypto wallet linked */}
+                {!isWalletConnected && !walletNudgeDismissed && (
+                    <div className="mb-6 flex items-center justify-between gap-4 bg-brand-gold/10 border border-brand-gold/30 rounded-xl px-5 py-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">🔗</span>
+                            <div>
+                                <p className="text-sm font-semibold text-white">Link a crypto wallet to unlock loans and trading</p>
+                                <p className="text-xs text-gray-400 mt-0.5">Your DigiPawns account is ready — connect MetaMask or any wallet to go on-chain.</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                            <button
+                                onClick={openWalletPicker}
+                                className="btn-metallic-gold py-1.5 px-4 rounded-lg text-sm font-bold whitespace-nowrap"
+                            >
+                                Connect Wallet
+                            </button>
+                            <button
+                                onClick={() => setWalletNudgeDismissed(true)}
+                                className="text-gray-500 hover:text-gray-300 transition-colors text-lg leading-none"
+                                aria-label="Dismiss"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex flex-col md:flex-row justify-between md:items-center mb-10">
                     <div>
                         <h1 className="text-3xl sm:text-4xl font-bold">Welcome, {profile.username}</h1>

@@ -11,7 +11,8 @@ import type { ShopItem } from '../types';
 type ShopTab = 'browse' | 'sell' | 'collection';
 
 const ShopPage: React.FC = () => {
-    const { isConnected, connectWallet, shopInventory, ownedItems, profile, buyShopItem } = useAppContext();
+    const { isConnected, connectWallet, shopInventory, ownedItems, profile, buyShopItem,
+            isWalletConnected, openWalletPicker } = useAppContext();
     const [tab, setTab] = useState<ShopTab>('browse');
     const [category, setCategory] = useState<string>('All');
     const [search, setSearch] = useState('');
@@ -40,13 +41,15 @@ const ShopPage: React.FC = () => {
     }, [approvedInventory, category, search]);
 
     const handleBuy = async (item: ShopItem) => {
-        if (!isConnected) { connectWallet(); return; }
+        if (!isConnected) { connectWallet(); return; }       // Not signed in → Google auth
+        if (!isWalletConnected) { openWalletPicker(); return; } // Signed in but no wallet → picker
         setBuyingId(item.id);
         try { await buyShopItem(item.id); } finally { setBuyingId(null); }
     };
 
     const handleTrade = (item: ShopItem) => {
         if (!isConnected) { connectWallet(); return; }
+        if (!isWalletConnected) { openWalletPicker(); return; }
         setTradeItem(item);
     };
 

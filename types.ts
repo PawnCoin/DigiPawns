@@ -196,6 +196,10 @@ export interface AppContextType {
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
   connectRealWallet: (connectorId?: string) => Promise<void>;
+  /** Opens the crypto wallet picker modal from anywhere in the app */
+  openWalletPicker: () => void;
+  /** Switches the connected wallet to the required chain (Base Sepolia) */
+  switchToCorrectChain: () => Promise<void>;
   walletOptions: { id: string; label: string; description: string }[];
   disconnectChainWallet: () => void;
 

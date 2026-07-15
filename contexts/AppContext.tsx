@@ -10,6 +10,7 @@ import {
 } from 'firebase/firestore';
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
 import { TARGET_CHAIN, WALLET_OPTIONS } from '../lib/web3';
+import WalletPickerModal from '../components/WalletPickerModal';
 
 const STARTING_BALANCE = 25000;
 
@@ -39,6 +40,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [allLoans, setAllLoans] = useState<Loan[]>([]);
     const [shopInventory, setShopInventory] = useState<ShopItem[]>([]);
     const [ownedItems, setOwnedItems] = useState<ShopItem[]>([]);
+    const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
 
     // ── Real Web3 wallet (Base Sepolia testnet) ─────────────────────────────────
     // This is a genuine on-chain wallet connection (MetaMask, etc.) — the address
@@ -510,13 +512,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // first paint before wagmi's auto-reconnect resolves).
     const walletAddress = chainAddress ?? profile.walletAddress ?? null;
 
+    const openWalletPicker = useCallback(() => setIsWalletPickerOpen(true), []);
+
+    const switchToCorrectChain = useCallback(async () => {
+        try {
+            await switchChainAsync({ chainId: TARGET_CHAIN.id });
+        } catch {
+            toast.error(`Please switch your wallet to ${TARGET_CHAIN.name} manually.`);
+        }
+    }, [switchChainAsync]);
+
     const value: AppContextType = {
         isConnected, isAdmin, userId, walletAddress, loans, profile,
         notificationSettings, activityLog, friends, messages, collections,
         allUsers, allLoans, shopInventory, ownedItems,
         isWalletConnected, isConnectingWallet, isCorrectChain, chainName: TARGET_CHAIN.name,
         walletOptions: WALLET_OPTIONS,
-        navigate, connectWallet, disconnectWallet, connectRealWallet, disconnectChainWallet,
+        navigate, connectWallet, disconnectWallet, connectRealWallet,
+        openWalletPicker, switchToCorrectChain,
+        disconnectChainWallet,
         addLoan, repayLoan, liquidateLoan,
         buyShopItem, sellNftToShop, tradeInForItem,
         adminAddShopItem, adminUpdateShopItem, adminDeleteShopItem,
@@ -526,7 +540,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         adminAddCollection, adminUpdateCollection, adminDeleteCollection,
     };
 
-    return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+    return (
+        <AppContext.Provider value={value}>
+            {children}
+            {isWalletPickerOpen && (
+                <WalletPickerModal onClose={() => setIsWalletPickerOpen(false)} />
+            )}
+        </AppContext.Provider>
+    );
 };
 
 export const useAppContext = (): AppContextType => {

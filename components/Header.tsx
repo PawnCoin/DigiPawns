@@ -2,16 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DigiPawnsFullLogo, WalletIcon, LogOutIcon } from './IconComponents';
 import { useAppContext } from '../contexts/AppContext';
 import useRouter from '../hooks/useRouter';
-import WalletPickerModal from './WalletPickerModal';
 
 const Header: React.FC = () => {
   const {
     isConnected, isAdmin, walletAddress, profile, connectWallet, disconnectWallet, navigate,
     isWalletConnected, isConnectingWallet, isCorrectChain, chainName, disconnectChainWallet,
+    openWalletPicker, switchToCorrectChain,
   } = useAppContext();
   const { route } = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleScrollClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -75,21 +74,30 @@ const Header: React.FC = () => {
 
             {/* ── Wallet pill — always visible ── */}
             {isWalletConnected ? (
-              /* Connected: show address badge */
-              <span
-                title={isCorrectChain ? `Connected to ${chainName}` : `Wrong network — switch to ${chainName}`}
-                className={`hidden sm:flex items-center gap-1.5 font-mono text-xs py-1.5 px-3 rounded-lg border cursor-default
-                  ${isCorrectChain
-                    ? 'border-green-700/50 bg-green-900/20 text-green-400'
-                    : 'border-red-700/50  bg-red-900/20  text-red-400'}`}
-              >
-                <span className={`w-2 h-2 rounded-full ${isCorrectChain ? 'bg-green-400' : 'bg-red-400'}`} />
-                {formatAddress(walletAddress || '')}
-              </span>
+              isCorrectChain ? (
+                /* Correct chain: green address badge */
+                <span
+                  title={`Connected to ${chainName}`}
+                  className="hidden sm:flex items-center gap-1.5 font-mono text-xs py-1.5 px-3 rounded-lg border border-green-700/50 bg-green-900/20 text-green-400 cursor-default"
+                >
+                  <span className="w-2 h-2 rounded-full bg-green-400" />
+                  {formatAddress(walletAddress || '')}
+                </span>
+              ) : (
+                /* Wrong chain: actionable "Switch Network" button */
+                <button
+                  onClick={switchToCorrectChain}
+                  title={`Switch to ${chainName}`}
+                  className="hidden sm:flex items-center gap-1.5 text-xs font-semibold py-1.5 px-3 rounded-lg border border-red-700/50 bg-red-900/20 text-red-400 hover:bg-red-900/40 transition-colors"
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-400" />
+                  Wrong Network
+                </button>
+              )
             ) : (
-              /* Not connected: show Connect Wallet button for everyone */
+              /* No crypto wallet: show Connect Wallet for all users */
               <button
-                onClick={() => setIsWalletPickerOpen(true)}
+                onClick={openWalletPicker}
                 disabled={isConnectingWallet}
                 className="hidden sm:flex items-center gap-2 text-xs font-semibold py-1.5 px-3 rounded-lg border border-yellow-900/50 text-brand-gold hover:border-brand-gold/60 hover:bg-brand-gold/10 transition-colors disabled:opacity-50"
               >
@@ -138,15 +146,22 @@ const Header: React.FC = () => {
                         <span>🏪</span><span>Shop Floor</span>
                       </button>
 
-                      {/* Connect Wallet — also available inside dropdown on mobile */}
-                      {!isWalletConnected && (
+                      {/* Wallet actions inside dropdown */}
+                      {!isWalletConnected ? (
                         <button
-                          onClick={() => { setIsDropdownOpen(false); setIsWalletPickerOpen(true); }}
+                          onClick={() => { setIsDropdownOpen(false); openWalletPicker(); }}
                           className="w-full text-left px-4 py-2 text-sm text-brand-gold hover:bg-brand-gold/10 flex items-center gap-2"
                         >
                           <WalletIcon className="w-4 h-4" /><span>Connect Wallet</span>
                         </button>
-                      )}
+                      ) : !isCorrectChain ? (
+                        <button
+                          onClick={() => { setIsDropdownOpen(false); switchToCorrectChain(); }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 flex items-center gap-2"
+                        >
+                          <span>⚠️</span><span>Switch to {chainName}</span>
+                        </button>
+                      ) : null}
 
                       {isAdmin && (
                         <button onClick={() => go('/admin')} className="w-full text-left px-4 py-2 text-sm text-brand-gold hover:bg-brand-gold/10 flex items-center gap-2">
@@ -172,7 +187,6 @@ const Header: React.FC = () => {
           </div>
         </div>
       </div>
-      {isWalletPickerOpen && <WalletPickerModal onClose={() => setIsWalletPickerOpen(false)} />}
     </header>
   );
 };

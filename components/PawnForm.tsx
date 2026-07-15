@@ -7,7 +7,7 @@ import { useAppContext } from '../contexts/AppContext';
 
 
 const PawnForm: React.FC = () => {
-    const { addLoan } = useAppContext();
+    const { addLoan, isConnected, isWalletConnected, connectWallet, openWalletPicker } = useAppContext();
     const [selectedMarket, setSelectedMarket] = useState<NftMarketplace>(NFT_MARKETPLACES[0]);
     const [contractAddress, setContractAddress] = useState<string>('');
     const [tokenId, setTokenId] = useState<string>('');
@@ -66,6 +66,9 @@ const PawnForm: React.FC = () => {
 
     const handleAcceptOffer = () => {
         if (!appraisalResult) return;
+        // Require sign-in before proceeding to the transaction modal.
+        if (!isConnected) { connectWallet(); return; }
+        if (!isWalletConnected) { openWalletPicker(); return; }
         // Generate a fresh uint256 loan ID for this acceptance attempt.
         // Using timestamp (milliseconds) gives a unique-enough ID for testnet use.
         const id = BigInt(Date.now());
