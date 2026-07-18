@@ -69,8 +69,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 catch { toast.error(`Please switch your wallet to ${TARGET_CHAIN.name} manually.`); }
             }
             toast.success('Wallet connected.');
-        } catch (err) {
-            toast.error('Wallet connection was rejected or failed.');
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (msg.includes('Allowlist') || msg.includes('allowlist') || msg.includes('not found on')) {
+                toast.error("WalletConnect isn't configured for this domain — use MetaMask or Coinbase Wallet instead.");
+            } else if (msg.includes('rejected') || msg.includes('denied') || msg.includes('user rejected')) {
+                toast.error('Connection cancelled.');
+            } else {
+                toast.error('Wallet connection failed — try a different wallet or check your browser extension.');
+            }
         }
     }, [connectAsync, connectors, switchChainAsync]);
 

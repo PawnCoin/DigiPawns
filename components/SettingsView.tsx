@@ -10,7 +10,6 @@ import {
     resolveInput,
     type SupportedChain,
 } from '../services/openSeaService';
-import WalletPickerModal from './WalletPickerModal';
 import BrowseSellModal from './BrowseSellModal';
 
 // ── NFT card used in both portfolio and browse results ────────────────────
@@ -100,8 +99,7 @@ type DataSource = 'alchemy' | 'opensea' | 'both';
 type PortfolioTab = 'my-wallet' | 'browse';
 
 const SettingsView: React.FC = () => {
-    const { navigate, walletAddress, isWalletConnected, isConnectingWallet, isCorrectChain, chainName, disconnectChainWallet } = useAppContext();
-    const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
+    const { navigate, walletAddress, isWalletConnected, isConnectingWallet, isCorrectChain, chainName, disconnectChainWallet, openWalletPicker } = useAppContext();
     const [portfolioTab, setPortfolioTab] = useState<PortfolioTab>('my-wallet');
 
     // ── My Wallet state ───────────────────────────────────────────────────
@@ -434,7 +432,7 @@ const SettingsView: React.FC = () => {
                         </div>
                     ) : (
                         <button
-                            onClick={() => setIsWalletPickerOpen(true)}
+                            onClick={openWalletPicker}
                             disabled={isConnectingWallet}
                             className="w-full flex items-center justify-center space-x-2 text-brand-gold border-2 border-dashed border-yellow-900/40 hover:border-brand-gold/60 hover:bg-brand-gold/10 rounded-lg py-3 transition-colors disabled:opacity-50"
                         >
@@ -442,7 +440,6 @@ const SettingsView: React.FC = () => {
                             <span>{isConnectingWallet ? 'Connecting…' : 'Connect Wallet'}</span>
                         </button>
                     )}
-                    {isWalletPickerOpen && <WalletPickerModal onClose={() => setIsWalletPickerOpen(false)} />}
 
                     {/* Quick-browse tip */}
                     <div className="mt-6 p-3 bg-brand-dark/50 rounded-lg border border-yellow-900/20">

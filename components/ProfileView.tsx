@@ -18,11 +18,12 @@ const Toggle: React.FC<{ label: string; enabled: boolean; onChange: (enabled: bo
 
 const ProfileView: React.FC = () => {
     const { 
-        walletAddress, 
+        walletAddress,
         profile: contextProfile, 
         notificationSettings: contextNotifications,
         updateProfile,
-        updateNotificationSettings
+        updateNotificationSettings,
+        openWalletPicker,
     } = useAppContext();
     
     const [profile, setProfile] = useState<UserProfile>(contextProfile);
@@ -112,15 +113,23 @@ const ProfileView: React.FC = () => {
                             />
                         </div>
                         <div>
-                            <label htmlFor="walletAddress" className="block text-sm font-medium text-gray-400">Wallet Address (Optional)</label>
-                            <input
-                                id="walletAddress"
-                                type="text"
-                                value={profile.walletAddress || ''}
-                                onChange={(e) => setProfile(p => ({ ...p, walletAddress: e.target.value }))}
-                                placeholder="0x..."
-                                className="mt-1 w-full bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-brand-gold/60 font-mono text-sm text-white placeholder-gray-600"
-                            />
+                            <label className="block text-sm font-medium text-gray-400">Connected Wallet</label>
+                            {walletAddress ? (
+                                <p className="mt-1 font-mono text-sm text-green-400 break-all bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3 select-all">
+                                    {walletAddress}
+                                </p>
+                            ) : (
+                                <div className="mt-1 flex items-center gap-3 bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3">
+                                    <span className="text-sm text-gray-500 flex-1">No wallet connected</span>
+                                    <button
+                                        onClick={openWalletPicker}
+                                        className="text-xs font-semibold text-brand-gold hover:underline whitespace-nowrap"
+                                    >
+                                        Connect →
+                                    </button>
+                                </div>
+                            )}
+                            <p className="mt-1 text-xs text-gray-600">Auto-synced from your connected wallet. Use the Connect Wallet button to change it.</p>
                         </div>
                     </div>
                 </div>

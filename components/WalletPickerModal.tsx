@@ -26,20 +26,31 @@ const WalletPickerModal: React.FC<WalletPickerModalProps> = ({ onClose }) => {
                 <h3 className="text-lg font-semibold text-white mb-1">Connect a Wallet</h3>
                 <p className="text-xs text-gray-500 mb-5">Choose how you'd like to connect. This links a real on-chain wallet — no manual address entry.</p>
                 <div className="space-y-2">
-                    {walletOptions.map(option => (
-                        <button
-                            key={option.id}
-                            onClick={() => handlePick(option.id)}
-                            disabled={isConnectingWallet}
-                            className="w-full flex items-center gap-3 text-left border border-yellow-900/30 hover:border-brand-gold/60 hover:bg-brand-gold/10 rounded-lg py-3 px-4 transition-colors disabled:opacity-50"
-                        >
-                            <WalletIcon className="w-5 h-5 text-brand-gold flex-shrink-0" />
-                            <span>
-                                <span className="block text-sm font-semibold text-white">{option.label}</span>
-                                <span className="block text-xs text-gray-500">{option.description}</span>
-                            </span>
-                        </button>
-                    ))}
+                    {walletOptions.map(option => {
+                        const isWC = option.id === 'walletConnect';
+                        return (
+                            <div key={option.id}>
+                                <button
+                                    onClick={() => handlePick(option.id)}
+                                    disabled={isConnectingWallet}
+                                    className="w-full flex items-center gap-3 text-left border border-yellow-900/30 hover:border-brand-gold/60 hover:bg-brand-gold/10 rounded-lg py-3 px-4 transition-colors disabled:opacity-50"
+                                >
+                                    <WalletIcon className="w-5 h-5 text-brand-gold flex-shrink-0" />
+                                    <span>
+                                        <span className="block text-sm font-semibold text-white">{option.label}</span>
+                                        <span className="block text-xs text-gray-500">{option.description}</span>
+                                    </span>
+                                </button>
+                                {isWC && (
+                                    <p className="text-[11px] text-yellow-600/80 px-1 mt-1">
+                                        ⚠️ Requires your domain to be added to the WalletConnect allowlist on{' '}
+                                        <a href="https://cloud.reown.com" target="_blank" rel="noreferrer" className="underline hover:text-yellow-400">cloud.reown.com</a>.
+                                        If it fails, use MetaMask or Coinbase Wallet instead.
+                                    </p>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
                 <button onClick={onClose} className="w-full mt-4 text-sm text-gray-400 hover:text-gray-200 transition-colors">
                     Cancel
