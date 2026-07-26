@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CalculatorIcon } from './IconComponents';
+import { useTokenBalances } from '../hooks/useTokenBalances';
+import { usePrices } from '../hooks/usePrices';
 
 interface LoanCalculatorModalProps {
     isOpen: boolean;
@@ -7,13 +9,20 @@ interface LoanCalculatorModalProps {
 }
 
 const REPAYMENT_TOKENS = [
-  { ticker: 'DIG',     label: '$DIG', logo: '/dig-logo.png',  discount: 0.25 },
-  { ticker: 'PC-ETH',  label: '$PC',  logo: '/pc-logo.png',   discount: 0.20 },
-  { ticker: 'OTHER',   label: 'Other (BTC / ETH / etc.)', logo: null, discount: 0 },
+  { ticker: 'DIG',     label: '$DIG', logo: '/dig-logo.png',  discount: 0.25, priceKey: 'dig'  as const },
+  { ticker: 'PC-ETH',  label: '$PC',  logo: '/pc-logo.png',   discount: 0.20, priceKey: 'pc'   as const },
+  { ticker: 'OTHER',   label: 'Other (BTC / ETH / etc.)', logo: null, discount: 0, priceKey: null },
 ];
 
 const fmt = (n: number) =>
   n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const fmtBal = (n: number) => {
+    if (n === 0) return '0';
+    if (n < 0.0001) return '<0.0001';
+    if (n < 1) return n.toFixed(4);
+    return n.toLocaleString(undefined, { maximumFractionDigits: 4 });
+};
 
 const LoanCalculatorModal: React.FC<LoanCalculatorModalProps> = ({ isOpen, onClose }) => {
     const [amount, setAmount]     = useState(10000);
@@ -23,6 +32,9 @@ const LoanCalculatorModal: React.FC<LoanCalculatorModalProps> = ({ isOpen, onClo
 
     const [totalInterest, setTotalInterest]   = useState(0);
     const [totalRepayment, setTotalRepayment] = useState(0);
+
+    const { balances, isEvmConnected } = useTokenBalances();
+    const { prices, isLoading: isPricesLoading } = usePrices();
 
     const selectedToken = REPAYMENT_TOKENS[tokenIdx];
     const discount      = selectedToken.discount;
@@ -46,6 +58,16 @@ const LoanCalculatorModal: React.FC<LoanCalculatorModalProps> = ({ isOpen, onClo
     if (!isOpen) return null;
 
     const hasDiscount = discount > 0;
+
+    // Resolve token balance and check sufficiency for each discounted token
+    const getTokenInfo = (t: typeof REPAYMENT_TOKENS[number]) => {
+        if (!t.priceKey || t.ticker === 'OTHER') return null;
+        const rawBalance = balances[t.ticker as keyof typeof balances];
+        const price      = prices[t.priceKey];
+        const usdValue   = rawBalance != null && price != null ? rawBalance * price : null;
+        const isSufficient = usdValue !== null ? usdValue >= discountedRepayment : null;
+        return { rawBalance, price, usdValue, isSufficient };
+    };
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -99,31 +121,67 @@ const LoanCalculatorModal: React.FC<LoanCalculatorModalProps> = ({ isOpen, onClo
                     <div>
                         <label className="font-medium text-gray-300 block mb-2">Repay with</label>
                         <div className="grid grid-cols-3 gap-2">
-                            {REPAYMENT_TOKENS.map((t, i) => (
-                                <button
-                                    key={t.ticker}
-                                    onClick={() => setTokenIdx(i)}
-                                    className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-bold transition-all duration-200
-                                        ${tokenIdx === i
-                                            ? 'border-brand-gold bg-brand-gold/15 text-brand-gold'
-                                            : 'border-yellow-900/30 text-gray-400 hover:border-brand-gold/40 hover:text-gray-200'
-                                        }`}
-                                >
-                                    {t.logo ? (
-                                        <img src={t.logo} alt={t.label} className="w-7 h-7 rounded-full object-cover" />
-                                    ) : (
-                                        <div className="w-7 h-7 rounded-full bg-brand-gray/60 border border-yellow-900/40 flex items-center justify-center">
-                                            <span className="text-[8px] font-bold text-gray-400">ANY</span>
-                                        </div>
-                                    )}
-                                    <span className="leading-none">{t.label}</span>
-                                    {t.discount > 0 && (
-                                        <span className="text-[9px] font-black text-green-400 leading-none">
-                                            -{Math.round(t.discount * 100)}% OFF
-                                        </span>
-                                    )}
-                                </button>
-                            ))}
+                            {REPAYMENT_TOKENS.map((t, i) => {
+                                const info = getTokenInfo(t);
+                                const isSelected = tokenIdx === i;
+
+                                return (
+                                    <div key={t.ticker} className="flex flex-col gap-1">
+                                        <button
+                                            onClick={() => setTokenIdx(i)}
+                                            className={`flex flex-col items-center justify-center gap-1.5 py-2.5 px-2 rounded-xl border text-xs font-bold transition-all duration-200
+                                                ${isSelected
+                                                    ? 'border-brand-gold bg-brand-gold/15 text-brand-gold'
+                                                    : 'border-yellow-900/30 text-gray-400 hover:border-brand-gold/40 hover:text-gray-200'
+                                                }`}
+                                        >
+                                            {t.logo ? (
+                                                <img src={t.logo} alt={t.label} className="w-7 h-7 rounded-full object-cover" />
+                                            ) : (
+                                                <div className="w-7 h-7 rounded-full bg-brand-gray/60 border border-yellow-900/40 flex items-center justify-center">
+                                                    <span className="text-[8px] font-bold text-gray-400">ANY</span>
+                                                </div>
+                                            )}
+                                            <span className="leading-none">{t.label}</span>
+                                            {t.discount > 0 && (
+                                                <span className="text-[9px] font-black text-green-400 leading-none">
+                                                    -{Math.round(t.discount * 100)}% OFF
+                                                </span>
+                                            )}
+                                        </button>
+
+                                        {/* Live balance under each token button */}
+                                        {info && isEvmConnected && (
+                                            <div className={`text-center text-[10px] leading-tight px-1 ${
+                                                info.isSufficient === false
+                                                    ? 'text-red-400/80'
+                                                    : info.isSufficient === true
+                                                    ? 'text-green-400/80'
+                                                    : 'text-gray-500'
+                                            }`}>
+                                                {info.rawBalance !== null ? (
+                                                    <>
+                                                        <div className="font-semibold tabular-nums">{fmtBal(info.rawBalance)} {t.label}</div>
+                                                        {info.usdValue !== null && (
+                                                            <div className="text-gray-600">${fmt(info.usdValue)}</div>
+                                                        )}
+                                                        {info.isSufficient === false && (
+                                                            <div className="text-red-400/80 font-bold">Insufficient</div>
+                                                        )}
+                                                    </>
+                                                ) : isPricesLoading ? (
+                                                    <span>Loading…</span>
+                                                ) : (
+                                                    <span>0 {t.label}</span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {info && !isEvmConnected && (
+                                            <div className="text-center text-[10px] text-gray-600">No wallet</div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>

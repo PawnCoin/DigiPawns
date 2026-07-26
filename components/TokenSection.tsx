@@ -1,10 +1,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { usePrices } from '../hooks/usePrices';
 
 const TOKENS = [
   {
     name: 'DigiPawns Token',
     ticker: '$DIG',
+    priceKey: 'dig' as const,
     logo: '/dig-logo.png',
     chains: ['Polygon', 'Ethereum'],
     chainColors: ['#8247e5', '#627eea'],
@@ -16,6 +18,7 @@ const TOKENS = [
   {
     name: 'Pawn Coin',
     ticker: '$PC',
+    priceKey: 'pc' as const,
     logo: '/pc-logo.png',
     chains: ['Ethereum', 'Solana'],
     chainColors: ['#627eea', '#9945ff'],
@@ -39,7 +42,36 @@ const PERKS = [
   'Exclusive VIP pawn tiers',
 ];
 
+const fmtPrice = (n: number): string => {
+  if (n >= 1) return '$' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (n >= 0.0001) return '$' + n.toFixed(6);
+  return '<$0.000001';
+};
+
+const PriceBadge: React.FC<{ price: number | null; isLoading: boolean }> = ({ price, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-1.5">
+        <span className="w-1.5 h-1.5 rounded-full bg-yellow-500/60 animate-pulse" />
+        <span className="text-xs text-gray-500">Loading price…</span>
+      </div>
+    );
+  }
+  if (price === null) {
+    return <span className="text-xs text-gray-600">Price unavailable</span>;
+  }
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+      <span className="text-sm font-bold text-white tabular-nums">{fmtPrice(price)}</span>
+      <span className="text-xs text-gray-500">USD · live</span>
+    </div>
+  );
+};
+
 const TokenSection: React.FC = () => {
+  const { prices, isLoading: isPricesLoading } = usePrices();
+
   return (
     <section className="py-20 sm:py-24">
       {/* Header */}
@@ -107,8 +139,13 @@ const TokenSection: React.FC = () => {
               </div>
             </div>
 
+            {/* Live price */}
+            <div className="flex items-center gap-2 -mt-2">
+              <PriceBadge price={prices[token.priceKey]} isLoading={isPricesLoading} />
+            </div>
+
             {/* Chain badges */}
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap -mt-2">
               {token.chains.map((chain, ci) => (
                 <span
                   key={chain}

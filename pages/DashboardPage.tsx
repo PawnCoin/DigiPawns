@@ -5,6 +5,7 @@ import ProfileView from '../components/ProfileView';
 import ActivityView from '../components/ActivityView';
 import FriendsView from '../components/FriendsView';
 import MessagesView from '../components/MessagesView';
+import TokenBalancesCard from '../components/TokenBalancesCard';
 import { useAppContext } from '../contexts/AppContext';
 import LoanCalculatorModal from '../components/LoanCalculatorModal';
 import { CalculatorIcon } from '../components/IconComponents';
@@ -22,7 +23,13 @@ const DashboardPage: React.FC = () => {
 
     const renderTabContent = () => {
         switch (activeTab) {
-            case 'loans':      return <LoanView />;
+            case 'loans':
+                return (
+                    <>
+                        <TokenBalancesCard />
+                        <LoanView />
+                    </>
+                );
             case 'portfolio':  return <SettingsView />;
             case 'profile':    return <ProfileView />;
             case 'activity':   return <ActivityView />;
