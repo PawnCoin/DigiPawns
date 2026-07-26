@@ -1,3 +1,4 @@
 - [DigiPawns architecture](digipawns-arch.md) — key data collections, admin detection, social messaging approach, NFT transfer flow
 - [Solana + wagmi coexistence](solana-wagmi-coexistence.md) — how EVM (wagmi v2) and Solana (wallet-adapter) run side-by-side in this project
 - [CoinGecko API quirks](coingecko-quirks.md) — contract address casing, free-tier cache strategy, token price fallback pattern
+- [Solana spl-token Buffer fix](solana-spl-token-buffer.md) — @solana/spl-token must be dynamically imported; static import crashes Vite due to ES module load order

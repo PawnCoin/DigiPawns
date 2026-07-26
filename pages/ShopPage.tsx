@@ -1,23 +1,23 @@
 import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
 import { useAppContext } from '../contexts/AppContext';
 import { NFT_CATEGORIES } from '../constants';
 import ShopItemCard from '../components/shop/ShopItemCard';
 import SellToShopPanel from '../components/shop/SellToShopPanel';
 import TradeInModal from '../components/shop/TradeInModal';
+import ShopBuyModal from '../components/ShopBuyModal';
 import type { ShopItem } from '../types';
 
 type ShopTab = 'browse' | 'sell' | 'collection';
 
 const ShopPage: React.FC = () => {
-    const { isConnected, connectWallet, shopInventory, ownedItems, profile, buyShopItem,
+    const { isConnected, connectWallet, shopInventory, ownedItems, profile,
             isWalletConnected, openWalletPicker } = useAppContext();
     const [tab, setTab] = useState<ShopTab>('browse');
     const [category, setCategory] = useState<string>('All');
     const [search, setSearch] = useState('');
     const [tradeItem, setTradeItem] = useState<ShopItem | null>(null);
-    const [buyingId, setBuyingId] = useState<string | null>(null);
+    const [buyItem, setBuyItem] = useState<ShopItem | null>(null);
 
     // Suspect image patterns that should never appear on the public storefront
     const isSuspectImageUrl = (url: string) =>
@@ -40,11 +40,10 @@ const ShopPage: React.FC = () => {
         });
     }, [approvedInventory, category, search]);
 
-    const handleBuy = async (item: ShopItem) => {
-        if (!isConnected) { connectWallet(); return; }       // Not signed in → Google auth
-        if (!isWalletConnected) { openWalletPicker(); return; } // Signed in but no wallet → picker
-        setBuyingId(item.id);
-        try { await buyShopItem(item.id); } finally { setBuyingId(null); }
+    const handleBuy = (item: ShopItem) => {
+        if (!isConnected) { connectWallet(); return; }
+        if (!isWalletConnected) { openWalletPicker(); return; }
+        setBuyItem(item);
     };
 
     const handleTrade = (item: ShopItem) => {
@@ -130,7 +129,6 @@ const ShopPage: React.FC = () => {
                                             <ShopItemCard
                                                 key={item.id}
                                                 item={item}
-                                                disabled={buyingId === item.id}
                                                 onBuy={() => handleBuy(item)}
                                                 onTrade={() => handleTrade(item)}
                                             />
@@ -175,6 +173,7 @@ const ShopPage: React.FC = () => {
             </main>
 
             {tradeItem && <TradeInModal item={tradeItem} onClose={() => setTradeItem(null)} />}
+            {buyItem && <ShopBuyModal item={buyItem} onClose={() => setBuyItem(null)} />}
         </motion.div>
     );
 };

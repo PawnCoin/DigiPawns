@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import type { Loan } from '../types';
-import { ArrowUpCircleIcon, CheckCircleIcon, ErrorIcon } from './IconComponents';
+import type { ShopItem } from '../types';
+import { CheckCircleIcon, ErrorIcon } from './IconComponents';
 import { useWriteContract, usePublicClient } from 'wagmi';
 import { mainnet } from 'wagmi/chains';
 import { parseUnits } from 'viem';
@@ -13,9 +13,9 @@ import { usePrices } from '../hooks/usePrices';
 import { useAppContext } from '../contexts/AppContext';
 
 // ── Token addresses ──────────────────────────────────────────────────────────
-const DIG_ADDRESS  = '0xf65A4a13D3DE514E1241ba515F0DE2B53eA8394B' as `0x${string}`;
+const DIG_ADDRESS    = '0xf65A4a13D3DE514E1241ba515F0DE2B53eA8394B' as `0x${string}`;
 const PC_ETH_ADDRESS = '0x2Fe269292f74F0a98C5786088317B4f86313C211' as `0x${string}`;
-const PC_SOL_MINT  = 'EFzKRUaSvLSehersFS12eXS4Nts32Mn9CKhftghFSarE';
+const PC_SOL_MINT    = 'EFzKRUaSvLSehersFS12eXS4Nts32Mn9CKhftghFSarE';
 
 // ── Platform wallets from env ────────────────────────────────────────────────
 const PLATFORM_EVM_WALLET  = (process.env.PLATFORM_WALLET  || '') as `0x${string}`;
@@ -30,8 +30,8 @@ const ERC20_ABI = [
         type: 'function' as const,
         stateMutability: 'nonpayable' as const,
         inputs: [
-            { name: 'to',     type: 'address'  as const },
-            { name: 'amount', type: 'uint256'  as const },
+            { name: 'to',     type: 'address' as const },
+            { name: 'amount', type: 'uint256' as const },
         ],
         outputs: [{ name: '', type: 'bool' as const }],
     },
@@ -65,51 +65,47 @@ const Spinner: React.FC = () => (
 );
 
 // ── Props ────────────────────────────────────────────────────────────────────
-interface RepayModalProps {
-    isOpen: boolean;
+interface ShopBuyModalProps {
+    item: ShopItem;
     onClose: () => void;
-    loan: Loan;
-    /** Called when Firestore should be updated. Must be async — modal awaits it and shows
-     *  a recovery screen (with tx hash) if it throws after an on-chain payment was made. */
-    onSuccess: (paymentInfo?: { txHash?: string; token: string; discountPct: number }) => Promise<void> | void;
 }
 
 type ModalStep = 'initial' | 'processing' | 'success' | 'error' | 'payment-recorded-failed';
 
 // ── Component ─────────────────────────────────────────────────────────────────
-const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSuccess }) => {
-    const [step, setStep]           = useState<ModalStep>('initial');
+const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
+    const [step, setStep]             = useState<ModalStep>('initial');
     const [selectedKey, setSelectedKey] = useState<PayKey>('credit');
     const [errorMessage, setErrorMessage] = useState('');
     const [savedAmount, setSavedAmount]   = useState(0);
     const [savedToken, setSavedToken]     = useState('');
-    // Set when on-chain payment confirmed but Firestore write failed — shown in recovery screen.
+    // Set when the on-chain payment succeeded but Firestore recording failed.
+    // User must note the tx hash to contact support.
     const [txHashForRecovery, setTxHashForRecovery] = useState<string | undefined>();
 
-    const { isSolanaConnected, isWalletConnected } = useAppContext();
-    const { balances }             = useTokenBalances();
-    const { prices }               = usePrices();
-    const { writeContractAsync }   = useWriteContract();
-    const publicClient             = usePublicClient({ chainId: mainnet.id });
+    const { isSolanaConnected, isWalletConnected, buyShopItem, profile } = useAppContext();
+    const { balances }            = useTokenBalances();
+    const { prices }              = usePrices();
+    const { writeContractAsync }  = useWriteContract();
+    const publicClient            = usePublicClient({ chainId: mainnet.id });
     const { sendTransaction, publicKey: solPublicKey } = useSolanaWallet();
-    const { connection }           = useConnection();
+    const { connection }          = useConnection();
 
-    // Reset when opened
+    const STARTING_BALANCE = 25000;
+    const storeCredit = profile.balance ?? STARTING_BALANCE;
+
+    // Reset on mount
     useEffect(() => {
-        if (isOpen) {
-            setStep('initial');
-            setErrorMessage('');
-            setSelectedKey('credit');
-        }
-    }, [isOpen]);
-
-    if (!isOpen) return null;
+        setStep('initial');
+        setErrorMessage('');
+        setSelectedKey('credit');
+    }, [item.id]);
 
     const selectedOption   = PAYMENT_OPTIONS.find(o => o.key === selectedKey)!;
     const discount         = selectedOption.discount;
-    const standardAmount   = loan.repaymentAmount;
-    const discountedAmount = standardAmount * (1 - discount);
-    const savings          = standardAmount - discountedAmount;
+    const standardPrice    = item.price;
+    const discountedPrice  = standardPrice * (1 - discount);
+    const savings          = standardPrice - discountedPrice;
 
     // ── Token price for a given key ──────────────────────────────────────────
     const tokenPrice = (key: PayKey): number | null => {
@@ -120,23 +116,34 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
 
     // ── Per-option status ────────────────────────────────────────────────────
     const getOptionStatus = (opt: PaymentOption) => {
-        if (opt.key === 'credit') return { available: true, note: 'No on-chain tx needed', insufficient: false, tokenAmount: 0 };
-
+        if (opt.key === 'credit') {
+            const insufficient = storeCredit < standardPrice;
+            return {
+                available: !insufficient,
+                note: `Balance: $${storeCredit.toLocaleString()}`,
+                insufficient,
+                tokenAmount: 0,
+            };
+        }
         if (opt.chain === 'evm' && !EVM_PAYMENTS_ENABLED) return { available: false, note: 'Not configured', insufficient: false, tokenAmount: 0 };
         if (opt.chain === 'sol' && !SOL_PAYMENTS_ENABLED) return { available: false, note: 'Not configured', insufficient: false, tokenAmount: 0 };
         if (opt.chain === 'evm' && !isWalletConnected)    return { available: false, note: 'No EVM wallet',  insufficient: false, tokenAmount: 0 };
         if (opt.chain === 'sol' && !isSolanaConnected)    return { available: false, note: 'No Solana wallet', insufficient: false, tokenAmount: 0 };
 
-        const price  = tokenPrice(opt.key);
-        if (!price)  return { available: false, note: 'Price unavailable', insufficient: false, tokenAmount: 0 };
+        const price = tokenPrice(opt.key);
+        if (!price) return { available: false, note: 'Price unavailable', insufficient: false, tokenAmount: 0 };
 
-        const raw        = balances[opt.key as keyof typeof balances] ?? 0;
-        const usdValue   = raw * price;
-        const tokenAmount = discountedAmount / price;
-        const insufficient = usdValue < discountedAmount;
-        const balStr   = `${fmtTok(raw)} ≈ $${fmt(usdValue)}`;
+        const raw          = balances[opt.key as keyof typeof balances] ?? 0;
+        const usdValue     = raw * price;
+        const tokenAmount  = discountedPrice / price;
+        const insufficient = usdValue < discountedPrice;
 
-        return { available: !insufficient, note: balStr, insufficient, tokenAmount };
+        return {
+            available: !insufficient,
+            note: `${fmtTok(raw)} ≈ $${fmt(usdValue)}`,
+            insufficient,
+            tokenAmount,
+        };
     };
 
     // ── ERC-20 transfer ──────────────────────────────────────────────────────
@@ -201,29 +208,35 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
         // Firestore recording fails AFTER a successful payment.
         let completedTxHash: string | undefined;
         try {
+            let paymentInfo: { txHash?: string; token: string; discountPct: number } | undefined;
+
             if (selectedKey === 'credit') {
-                await new Promise(r => setTimeout(r, 700));
+                await buyShopItem(item.id);           // throws on any failure
             } else if (selectedKey === 'DIG') {
-                completedTxHash = await executeERC20(DIG_ADDRESS, discountedAmount, 'DIG');
+                completedTxHash = await executeERC20(DIG_ADDRESS, discountedPrice, 'DIG');
+                paymentInfo = { txHash: completedTxHash, token: 'DIG', discountPct: discount };
+                await buyShopItem(item.id, paymentInfo); // throws if Firestore write fails
             } else if (selectedKey === 'PC-ETH') {
-                completedTxHash = await executeERC20(PC_ETH_ADDRESS, discountedAmount, 'PC-ETH');
+                completedTxHash = await executeERC20(PC_ETH_ADDRESS, discountedPrice, 'PC-ETH');
+                paymentInfo = { txHash: completedTxHash, token: 'PC-ETH', discountPct: discount };
+                await buyShopItem(item.id, paymentInfo);
             } else if (selectedKey === 'PC-SOL') {
-                completedTxHash = await executeSPL(discountedAmount);
+                completedTxHash = await executeSPL(discountedPrice);
+                paymentInfo = { txHash: completedTxHash, token: 'PC-SOL', discountPct: discount };
+                await buyShopItem(item.id, paymentInfo);
             }
 
-            // Persist to Firestore BEFORE showing success — if this throws, show recovery.
-            await onSuccess({ txHash: completedTxHash, token: selectedKey, discountPct: discount });
-
+            // Only reaches here if buyShopItem resolved without throwing.
             setSavedAmount(savings);
             setSavedToken(selectedOption.label);
             setStep('success');
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             if (/rejected|denied|user rejected/i.test(msg)) {
-                // User cancelled in wallet — return to initial, no error shown.
+                // User cancelled in wallet — stay on initial screen, no error shown.
                 setStep('initial');
             } else if (completedTxHash) {
-                // On-chain payment confirmed but Firestore update failed.
+                // On-chain payment succeeded but Firestore recording failed.
                 // Surface the tx hash so the user can contact support.
                 setTxHashForRecovery(completedTxHash);
                 setStep('payment-recorded-failed');
@@ -234,12 +247,12 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
         }
     };
 
-    // ── Render steps ─────────────────────────────────────────────────────────
+    // ── Render ───────────────────────────────────────────────────────────────
     const renderContent = () => {
         if (step === 'processing') return (
             <div className="flex flex-col items-center gap-4 py-8">
                 <Spinner />
-                <p className="text-gray-300 font-medium">Processing payment…</p>
+                <p className="text-gray-300 font-medium">Processing purchase…</p>
                 <p className="text-gray-500 text-sm text-center">Confirm in your wallet if prompted.<br />Do not close this window.</p>
             </div>
         );
@@ -249,14 +262,14 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20">
                     <CheckCircleIcon className="h-8 w-8 text-green-400" />
                 </div>
-                <h3 className="text-2xl font-semibold text-center">Loan Repaid!</h3>
+                <h3 className="text-2xl font-semibold text-center">Purchase Complete!</h3>
                 {savedAmount > 0 && (
                     <div className="bg-green-950/60 border border-green-800/40 rounded-xl px-6 py-3 text-center">
                         <p className="text-green-300 font-black text-lg">✅ You saved ${fmt(savedAmount)}</p>
                         <p className="text-green-400/80 text-sm">by paying with {savedToken}</p>
                     </div>
                 )}
-                <p className="text-gray-400 text-center text-sm">Your NFT will be returned to your wallet shortly.</p>
+                <p className="text-gray-400 text-center text-sm">{item.name} is now in your collection.</p>
                 <button onClick={onClose} className="w-full btn-metallic-gold py-3 rounded-xl font-bold mt-2">Done</button>
             </div>
         );
@@ -266,7 +279,7 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-500/20">
                     <ErrorIcon className="h-8 w-8 text-red-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-center text-red-300">Payment Failed</h3>
+                <h3 className="text-xl font-semibold text-center text-red-300">Purchase Failed</h3>
                 <p className="text-sm text-gray-400 text-center break-words max-w-xs">{errorMessage}</p>
                 <button onClick={() => setStep('initial')} className="w-full border border-yellow-900/40 text-gray-300 hover:text-white py-3 rounded-xl font-semibold mt-2 transition-colors">Try Again</button>
             </div>
@@ -279,7 +292,7 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
                 </div>
                 <h3 className="text-xl font-semibold text-center text-yellow-300">Payment Sent — Recording Failed</h3>
                 <p className="text-sm text-gray-400 text-center max-w-xs">
-                    Your payment went through on-chain, but we couldn't update the loan record. Save your transaction hash and contact support — your repayment will be confirmed manually.
+                    Your payment went through on-chain, but we couldn't record the purchase. Save your transaction hash and contact support — your ownership will be confirmed manually.
                 </p>
                 {txHashForRecovery && (
                     <div className="w-full bg-brand-dark/80 border border-yellow-900/40 rounded-xl p-3">
@@ -291,103 +304,111 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
             </div>
         );
 
-        // ── 'initial' step ───────────────────────────────────────────────────
+        // ── initial ──────────────────────────────────────────────────────────
         const currentPrice = tokenPrice(selectedKey);
-        const tokenAmount  = currentPrice ? discountedAmount / currentPrice : null;
+        const tokenAmt     = currentPrice ? discountedPrice / currentPrice : null;
 
         return (
             <>
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-gold/20 mb-3">
-                    <ArrowUpCircleIcon className="h-7 w-7 text-brand-gold" />
-                </div>
-                <h3 className="text-2xl font-semibold text-center">Repay Your Loan</h3>
-                <p className="text-gray-400 text-center mt-1 text-sm">Choose how you want to pay and reclaim your NFT.</p>
-
-                {/* Loan summary */}
-                <div className="mt-5 space-y-2 bg-brand-dark/50 p-4 rounded-xl border border-yellow-900/20">
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Asset:</span>
-                        <span className="font-medium text-right truncate max-w-[200px]">{loan.nft.name}</span>
+                {/* Item header */}
+                <div className="flex gap-4 items-center mb-4">
+                    <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-brand-dark/60 border border-yellow-900/20">
+                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover"
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                        />
                     </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-400">Standard total:</span>
-                        <span className={`font-semibold ${discount > 0 ? 'line-through text-gray-600' : 'text-white'}`}>${fmt(standardAmount)}</span>
+                    <div className="min-w-0">
+                        <p className="text-xs text-gray-400 truncate">{item.collection}</p>
+                        <h3 className="font-bold text-white text-lg truncate">{item.name}</h3>
+                        <p className="text-brand-gold font-black text-xl">${standardPrice.toLocaleString()}</p>
+                    </div>
+                </div>
+
+                {/* Price summary */}
+                <div className="space-y-1.5 bg-brand-dark/50 p-3 rounded-xl border border-yellow-900/20 mb-4 text-sm">
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">Standard price:</span>
+                        <span className={discount > 0 ? 'line-through text-gray-600' : 'font-semibold text-white'}>${fmt(standardPrice)}</span>
                     </div>
                     {discount > 0 && (
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between">
                             <span className="text-green-400 font-semibold">With {selectedOption.label} ({Math.round(discount * 100)}% off):</span>
-                            <span className="font-bold text-green-300">${fmt(discountedAmount)}</span>
+                            <span className="font-bold text-green-300">${fmt(discountedPrice)}</span>
                         </div>
                     )}
                 </div>
 
                 {/* Payment options */}
-                <div className="mt-4">
-                    <p className="text-sm font-medium text-gray-300 mb-2">Pay with:</p>
-                    <div className="grid grid-cols-2 gap-2">
-                        {PAYMENT_OPTIONS.map(opt => {
-                            const status     = getOptionStatus(opt);
-                            const isSelected = selectedKey === opt.key;
-                            const isDisabled = !status.available && opt.key !== 'credit';
+                <p className="text-sm font-medium text-gray-300 mb-2">Pay with:</p>
+                <div className="grid grid-cols-2 gap-2">
+                    {PAYMENT_OPTIONS.map(opt => {
+                        const status     = getOptionStatus(opt);
+                        const isSelected = selectedKey === opt.key;
+                        const isDisabled = !status.available;
 
-                            return (
-                                <button
-                                    key={opt.key}
-                                    onClick={() => !isDisabled && setSelectedKey(opt.key)}
-                                    disabled={isDisabled}
-                                    className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all duration-150
-                                        ${isSelected ? 'border-brand-gold bg-brand-gold/10' : 'border-yellow-900/30 hover:border-brand-gold/40'}
-                                        ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-                                    `}
-                                >
-                                    <div className="flex items-center gap-2 w-full">
-                                        {opt.logo ? (
-                                            <img src={opt.logo} alt={opt.label} className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-                                        ) : (
-                                            <div className="w-5 h-5 rounded-full bg-brand-gold/20 border border-brand-gold/30 flex items-center justify-center flex-shrink-0">
-                                                <span className="text-[6px] font-bold text-brand-gold">SC</span>
-                                            </div>
-                                        )}
-                                        <span className={`text-xs font-bold flex-1 ${isSelected ? 'text-brand-gold' : 'text-gray-300'}`}>{opt.label}</span>
-                                        {opt.discount > 0 && (
-                                            <span className="text-[9px] font-black text-green-400">-{Math.round(opt.discount * 100)}%</span>
-                                        )}
-                                    </div>
-                                    <div className="pl-7 text-[10px] leading-tight">
-                                        {status.insufficient ? (
-                                            <span className="text-red-400">Insufficient balance — need more {opt.label.split(' ')[0]}</span>
-                                        ) : (
-                                            <span className="text-gray-500">{status.note}</span>
-                                        )}
-                                    </div>
-                                </button>
-                            );
-                        })}
-                    </div>
+                        return (
+                            <button
+                                key={opt.key}
+                                onClick={() => !isDisabled && setSelectedKey(opt.key)}
+                                disabled={isDisabled}
+                                className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all duration-150
+                                    ${isSelected ? 'border-brand-gold bg-brand-gold/10' : 'border-yellow-900/30 hover:border-brand-gold/40'}
+                                    ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
+                                `}
+                            >
+                                <div className="flex items-center gap-2 w-full">
+                                    {opt.logo ? (
+                                        <img src={opt.logo} alt={opt.label} className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                                    ) : (
+                                        <div className="w-5 h-5 rounded-full bg-brand-gold/20 border border-brand-gold/30 flex items-center justify-center flex-shrink-0">
+                                            <span className="text-[6px] font-bold text-brand-gold">SC</span>
+                                        </div>
+                                    )}
+                                    <span className={`text-xs font-bold flex-1 ${isSelected ? 'text-brand-gold' : 'text-gray-300'}`}>{opt.label}</span>
+                                    {opt.discount > 0 && (
+                                        <span className="text-[9px] font-black text-green-400">-{Math.round(opt.discount * 100)}%</span>
+                                    )}
+                                </div>
+                                <div className="pl-7 text-[10px] leading-tight">
+                                    {status.insufficient ? (
+                                        <span className="text-red-400">Insufficient — {status.note}</span>
+                                    ) : (
+                                        <span className="text-gray-500">{status.note}</span>
+                                    )}
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* Token amount preview */}
-                {selectedKey !== 'credit' && tokenAmount !== null && (
+                {selectedKey !== 'credit' && tokenAmt !== null && (
                     <div className="mt-3 p-3 bg-brand-dark/40 rounded-lg border border-yellow-900/20 flex justify-between items-center text-sm">
                         <span className="text-gray-400">You send:</span>
-                        <span className="font-bold text-white">{fmtTok(tokenAmount)} {selectedOption.label}</span>
+                        <span className="font-bold text-white">{fmtTok(tokenAmt)} {selectedOption.label}</span>
                     </div>
                 )}
 
-                {/* Insufficient balance nudge */}
+                {/* Insufficient nudge */}
                 {selectedKey !== 'credit' && getOptionStatus(selectedOption).insufficient && (
                     <p className="mt-2 text-xs text-amber-400 text-center">
                         Not enough {selectedOption.label} — swap some first in the Swap tab.
                     </p>
                 )}
+                {selectedKey === 'credit' && getOptionStatus(selectedOption).insufficient && (
+                    <p className="mt-2 text-xs text-red-400 text-center">
+                        Not enough store credit (${storeCredit.toLocaleString()} available).
+                    </p>
+                )}
 
                 <button
                     onClick={handleConfirm}
-                    className="w-full btn-metallic-gold py-3 rounded-xl font-bold text-base mt-4"
+                    disabled={!getOptionStatus(selectedOption).available}
+                    className="w-full btn-metallic-gold py-3 rounded-xl font-bold text-base mt-4 disabled:opacity-50 disabled:cursor-not-allowed disabled:[animation:none]"
                 >
                     {discount > 0
-                        ? `Pay ${selectedOption.label} & Save $${fmt(savings)}`
-                        : `Repay $${fmt(standardAmount)}`}
+                        ? `Buy with ${selectedOption.label} — Save $${fmt(savings)}`
+                        : `Buy for $${fmt(standardPrice)}`}
                 </button>
             </>
         );
@@ -395,7 +416,7 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-brand-navy border border-yellow-900/40 rounded-2xl shadow-2xl p-8 w-full max-w-md relative">
+            <div className="bg-brand-navy border border-yellow-900/40 rounded-2xl shadow-2xl p-6 w-full max-w-md relative">
                 {step !== 'processing' && step !== 'success' && (
                     <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-white text-2xl leading-none">&times;</button>
                 )}
@@ -405,4 +426,4 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
     );
 };
 
-export default RepayModal;
+export default ShopBuyModal;

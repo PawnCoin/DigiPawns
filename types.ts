@@ -37,6 +37,12 @@ export interface Loan {
   status: LoanStatus;
   nftTransferStatus?: NftTransferStatus;
   createdAt?: string;
+  /** On-chain tx hash when the loan was repaid with a token (DIG/PC). */
+  repaymentTxHash?: string;
+  /** Token ticker used to repay ('credit' | 'DIG' | 'PC-ETH' | 'PC-SOL'). */
+  repaymentToken?: string;
+  /** Discount percentage applied at repayment (e.g. 0.25 for DIG). */
+  repaymentDiscountPct?: number;
 }
 
 export interface UserProfile {
@@ -212,11 +218,11 @@ export interface AppContextType {
 
   // Loan actions
   addLoan: (loan: Loan) => void;
-  repayLoan: (loanId: string) => void;
+  repayLoan: (loanId: string, paymentInfo?: { txHash?: string; token?: string; discountPct?: number }) => void;
   liquidateLoan: (loanId: string) => void;
 
   // Shop actions
-  buyShopItem: (itemId: string) => Promise<void>;
+  buyShopItem: (itemId: string, paymentInfo?: { txHash?: string; token?: string; discountPct?: number }) => Promise<void>;
   sellNftToShop: (item: { name: string; collection: string; imageUrl: string; category?: string }, price: number) => Promise<void>;
   tradeInForItem: (shopItemId: string, offeredNft: { name: string; collection: string; imageUrl: string; category?: string }) => Promise<void>;
   adminAddShopItem: (item: Omit<ShopItem, 'id' | 'listedAt' | 'source'>) => Promise<void>;

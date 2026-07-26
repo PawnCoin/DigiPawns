@@ -1,3 +1,10 @@
+// Polyfill Buffer globally for @solana/spl-token and @solana/web3.js.
+// These libraries reference Buffer as a global; Vite externalises Node's buffer,
+// so we provide the browser-compatible npm shim before any Solana imports run.
+import { Buffer } from 'buffer';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).Buffer = (globalThis as any).Buffer ?? Buffer;
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { WagmiProvider } from 'wagmi';

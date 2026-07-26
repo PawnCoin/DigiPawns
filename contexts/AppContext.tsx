@@ -313,12 +313,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         } catch { toast.error('Failed to create loan'); }
     };
 
-    const repayLoan = async (loanId: string) => {
-        if (!userId) return;
+    const repayLoan = async (loanId: string, paymentInfo?: { txHash?: string; token?: string; discountPct?: number }) => {
+        if (!userId) throw new Error('Not authenticated.');
         const loan = loans.find(l => l.id === loanId);
-        if (!loan) return;
-        await setDoc(doc(db, 'loans', loanId), { status: 'Repaid', nftTransferStatus: 'returned' }, { merge: true });
-        logActivity('loan-repaid', `Loan for ${loan.nft?.name || loan.nftName} repaid successfully.`);
+        if (!loan) throw new Error('Loan not found.');
+        const update: Record<string, unknown> = { status: 'Repaid', nftTransferStatus: 'returned' };
+        if (paymentInfo?.txHash) update.repaymentTxHash = paymentInfo.txHash;
+        if (paymentInfo?.token) update.repaymentToken = paymentInfo.token;
+        if (paymentInfo?.discountPct != null) update.repaymentDiscountPct = paymentInfo.discountPct;
+        // Let Firestore errors propagate — caller (RepayModal) handles recovery UI.
+        await setDoc(doc(db, 'loans', loanId), update, { merge: true });
+        logActivity('loan-repaid', `Loan for ${loan.nft?.name || loan.nftName} repaid${paymentInfo?.token && paymentInfo.token !== 'credit' ? ` with ${paymentInfo.token}` : ''}.`).catch(console.error);
         if (notificationSettings.repaymentSuccess) toast.success(`Loan repaid! Your NFT will be returned.`);
     };
 
@@ -346,16 +351,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     // ── Shop actions ───────────────────────────────────────────────────────────
-    const buyShopItem = async (itemId: string) => {
-        if (!userId) return;
+    const buyShopItem = async (itemId: string, paymentInfo?: { txHash?: string; token?: string; discountPct?: number }) => {
+        if (!userId) throw new Error('Not authenticated.');
         const item = shopInventory.find(i => i.id === itemId);
-        if (!item) { toast.error('That item is no longer available.'); return; }
-        const currentBalance = profile.balance ?? STARTING_BALANCE;
-        if (currentBalance < item.price) { toast.error("You don't have enough store credit for this item."); return; }
-        try {
+        if (!item) throw new Error('That item is no longer available.');
+
+        const usedTokenPayment = !!paymentInfo?.txHash;
+
+        if (!usedTokenPayment) {
+            // Store credit path: check balance and deduct.
+            const currentBalance = profile.balance ?? STARTING_BALANCE;
+            if (currentBalance < item.price) throw new Error("Not enough store credit for this item.");
             // Atomic batch: remove from shop, add to owned, deduct balance.
-            // All three succeed together or none do — item can't disappear without
-            // being credited to the buyer.
+            // Let Firestore errors propagate — caller (ShopBuyModal) handles UI feedback.
             const batch = writeBatch(db);
             batch.delete(doc(db, 'shopInventory', itemId));
             const ownedRef = doc(collection(db, 'ownedItems'));
@@ -366,11 +374,24 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             });
             batch.update(doc(db, 'users', userId), { balance: currentBalance - item.price });
             await batch.commit();
-            logActivity('item-bought', `Purchased ${item.name} from the shop floor for ${item.price.toLocaleString()}.`);
-            toast.success(`You bought ${item.name}!`);
-        } catch (err) {
-            console.error('buyShopItem failed:', err);
-            toast.error('Purchase failed. Please try again.');
+            logActivity('item-bought', `Purchased ${item.name} from the shop floor for $${item.price.toLocaleString()}.`).catch(console.error);
+        } else {
+            // Token payment path: on-chain tx already completed; record the sale.
+            // IMPORTANT: if this batch fails, the caller must surface a recovery state
+            // (user's payment went through but ownership was not recorded).
+            const batch = writeBatch(db);
+            batch.delete(doc(db, 'shopInventory', itemId));
+            const ownedRef = doc(collection(db, 'ownedItems'));
+            batch.set(ownedRef, {
+                uid: userId, name: item.name, collection: item.collection, imageUrl: item.imageUrl,
+                category: item.category || '', chain: item.chain || 'Ethereum', price: item.price,
+                source: item.source, listedAt: new Date().toISOString(),
+                paymentTxHash: paymentInfo.txHash,
+                paymentToken: paymentInfo.token,
+                paymentDiscountPct: paymentInfo.discountPct,
+            });
+            await batch.commit(); // throws on Firestore failure — caller shows recovery state
+            logActivity('item-bought', `Purchased ${item.name} using ${paymentInfo.token} (${Math.round((paymentInfo.discountPct ?? 0) * 100)}% discount).`).catch(console.error);
         }
     };
 

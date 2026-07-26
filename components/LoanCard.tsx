@@ -7,7 +7,7 @@ import { motion } from 'framer-motion';
 
 interface LoanCardProps {
   loan: Loan;
-  repayLoan: (loanId: string) => void;
+  repayLoan: (loanId: string, paymentInfo?: { txHash?: string; token?: string; discountPct?: number }) => void;
   liquidateLoan: (loanId: string) => void;
 }
 
@@ -29,9 +29,9 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, repayLoan, liquidateLoan }) =
   const statusClass = statusStyles[loan.status] || 'bg-gray-500/20 text-gray-300';
   const borderClass = loan.status === 'Defaulted' ? 'border-red-700/60 hover:border-red-500/80' : 'border-yellow-900/40 hover:border-brand-gold/60';
 
-  const handleRepaySuccess = () => {
-    repayLoan(loan.id);
-    setIsRepayModalOpen(false);
+  const handleRepaySuccess = async (paymentInfo?: { txHash?: string; token: string; discountPct: number }) => {
+    // Awaited so RepayModal can detect Firestore failures and show a recovery screen.
+    await repayLoan(loan.id, paymentInfo);
   };
 
   const handleLiquidateSuccess = () => {
