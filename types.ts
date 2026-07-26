@@ -44,6 +44,7 @@ export interface UserProfile {
     username: string;
     avatarNftUrl: string | null;
     walletAddress?: string | null;
+    solanaAddress?: string | null;
     bio?: string;
     isAdmin?: boolean;
     createdAt?: string;
@@ -191,6 +192,12 @@ export interface AppContextType {
   shopInventory: ShopItem[];
   ownedItems: ShopItem[];
 
+  // Solana wallet
+  isSolanaConnected: boolean;
+  solanaAddress: string | null;
+  connectSolanaWallet: (walletName: string) => void;
+  disconnectSolanaWallet: () => void;
+
   // Auth
   navigate: (path: string) => void;
   connectWallet: () => Promise<void>;
@@ -198,7 +205,7 @@ export interface AppContextType {
   connectRealWallet: (connectorId?: string) => Promise<void>;
   /** Opens the crypto wallet picker modal from anywhere in the app */
   openWalletPicker: () => void;
-  /** Switches the connected wallet to the required chain (Base Sepolia) */
+  /** Switches the connected EVM wallet to a supported chain */
   switchToCorrectChain: () => Promise<void>;
   walletOptions: { id: string; label: string; description: string }[];
   disconnectChainWallet: () => void;

@@ -8,6 +8,7 @@ const Header: React.FC = () => {
     isConnected, isAdmin, walletAddress, profile, connectWallet, disconnectWallet, navigate,
     isWalletConnected, isConnectingWallet, isCorrectChain, chainName, disconnectChainWallet,
     openWalletPicker, switchToCorrectChain,
+    isSolanaConnected, solanaAddress, disconnectSolanaWallet,
   } = useAppContext();
   const { route } = useRouter();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -72,22 +73,34 @@ const Header: React.FC = () => {
           {/* Right-side controls */}
           <div className="flex items-center gap-2">
 
-            {/* ── Wallet pill — always visible ── */}
+            {/* ── Solana wallet pill ── */}
+            {isSolanaConnected && solanaAddress && (
+              <span
+                title={`Solana: ${solanaAddress}`}
+                className="hidden sm:flex items-center gap-1.5 font-mono text-xs py-1.5 px-3 rounded-lg border border-purple-700/50 bg-purple-900/20 text-purple-300 cursor-default"
+              >
+                <span className="w-2 h-2 rounded-full bg-purple-400" />
+                ◎ {formatAddress(solanaAddress)}
+              </span>
+            )}
+
+            {/* ── EVM wallet pill ── */}
             {isWalletConnected ? (
               isCorrectChain ? (
-                /* Correct chain: green address badge */
+                /* On a supported chain: show chain name + address */
                 <span
-                  title={`Connected to ${chainName}`}
+                  title={`EVM: connected to ${chainName}`}
                   className="hidden sm:flex items-center gap-1.5 font-mono text-xs py-1.5 px-3 rounded-lg border border-green-700/50 bg-green-900/20 text-green-400 cursor-default"
                 >
                   <span className="w-2 h-2 rounded-full bg-green-400" />
+                  <span className="hidden lg:inline text-green-600 mr-0.5">{chainName.split(' ')[0]}</span>
                   {formatAddress(walletAddress || '')}
                 </span>
               ) : (
-                /* Wrong chain: actionable "Switch Network" button */
+                /* Unsupported chain: Switch Network */
                 <button
                   onClick={switchToCorrectChain}
-                  title={`Switch to ${chainName}`}
+                  title="Switch to Ethereum, Polygon, or Base Sepolia"
                   className="hidden sm:flex items-center gap-1.5 text-xs font-semibold py-1.5 px-3 rounded-lg border border-red-700/50 bg-red-900/20 text-red-400 hover:bg-red-900/40 transition-colors"
                 >
                   <span className="w-2 h-2 rounded-full bg-red-400" />
@@ -95,7 +108,7 @@ const Header: React.FC = () => {
                 </button>
               )
             ) : (
-              /* No crypto wallet: show Connect Wallet for all users */
+              /* No EVM wallet: Connect Wallet button */
               <button
                 onClick={openWalletPicker}
                 disabled={isConnectingWallet}
@@ -132,7 +145,10 @@ const Header: React.FC = () => {
                       <div className="px-4 py-2 mb-1 border-b border-yellow-900/20">
                         <p className="text-white font-semibold text-sm truncate">{profile.username}</p>
                         {walletAddress && (
-                          <p className="text-gray-500 text-xs font-mono">{formatAddress(walletAddress)}</p>
+                          <p className="text-gray-500 text-xs font-mono">⬡ {formatAddress(walletAddress)}</p>
+                        )}
+                        {solanaAddress && (
+                          <p className="text-purple-500/80 text-xs font-mono">◎ {formatAddress(solanaAddress)}</p>
                         )}
                       </div>
 
@@ -159,9 +175,24 @@ const Header: React.FC = () => {
                           onClick={() => { setIsDropdownOpen(false); switchToCorrectChain(); }}
                           className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 flex items-center gap-2"
                         >
-                          <span>⚠️</span><span>Switch to {chainName}</span>
+                          <span>⚠️</span><span>Switch to Supported Chain</span>
                         </button>
                       ) : null}
+                      {!isSolanaConnected ? (
+                        <button
+                          onClick={() => { setIsDropdownOpen(false); openWalletPicker(); }}
+                          className="w-full text-left px-4 py-2 text-sm text-purple-400 hover:bg-purple-900/20 flex items-center gap-2"
+                        >
+                          <span>◎</span><span>Connect Solana</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => { disconnectSolanaWallet(); setIsDropdownOpen(false); }}
+                          className="w-full text-left px-4 py-2 text-sm text-purple-400/70 hover:bg-purple-900/20 flex items-center gap-2"
+                        >
+                          <span>◎</span><span>Disconnect Solana</span>
+                        </button>
+                      )}
 
                       {isAdmin && (
                         <button onClick={() => go('/admin')} className="w-full text-left px-4 py-2 text-sm text-brand-gold hover:bg-brand-gold/10 flex items-center gap-2">

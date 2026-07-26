@@ -18,7 +18,7 @@ const Toggle: React.FC<{ label: string; enabled: boolean; onChange: (enabled: bo
 
 const ProfileView: React.FC = () => {
     const { 
-        walletAddress,
+        walletAddress, isSolanaConnected, solanaAddress,
         profile: contextProfile, 
         notificationSettings: contextNotifications,
         updateProfile,
@@ -129,7 +129,28 @@ const ProfileView: React.FC = () => {
                                     </button>
                                 </div>
                             )}
-                            <p className="mt-1 text-xs text-gray-600">Auto-synced from your connected wallet. Use the Connect Wallet button to change it.</p>
+                            <p className="mt-1 text-xs text-gray-600">Auto-synced from your EVM wallet (MetaMask, Coinbase, etc.).</p>
+                        </div>
+
+                        {/* Solana wallet address */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-400">Solana Wallet</label>
+                            {isSolanaConnected && solanaAddress ? (
+                                <p className="mt-1 font-mono text-sm text-purple-400 break-all bg-brand-dark border border-purple-900/40 rounded-md py-2 px-3 select-all">
+                                    {solanaAddress}
+                                </p>
+                            ) : (
+                                <div className="mt-1 flex items-center gap-3 bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3">
+                                    <span className="text-sm text-gray-500 flex-1">No Solana wallet connected</span>
+                                    <button
+                                        onClick={openWalletPicker}
+                                        className="text-xs font-semibold text-purple-400 hover:underline whitespace-nowrap"
+                                    >
+                                        Connect →
+                                    </button>
+                                </div>
+                            )}
+                            <p className="mt-1 text-xs text-gray-600">Auto-synced from Phantom, Solflare, or Backpack.</p>
                         </div>
                     </div>
                 </div>

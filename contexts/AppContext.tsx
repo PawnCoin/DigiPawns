@@ -9,7 +9,9 @@ import {
     deleteDoc, getDocs, limit, addDoc, writeBatch
 } from 'firebase/firestore';
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
-import { TARGET_CHAIN, WALLET_OPTIONS } from '../lib/web3';
+import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
+import type { WalletName } from '@solana/wallet-adapter-base';
+import { TARGET_CHAIN, WALLET_OPTIONS, SUPPORTED_EVM_CHAINS, SUPPORTED_EVM_CHAIN_IDS } from '../lib/web3';
 import WalletPickerModal from '../components/WalletPickerModal';
 
 const STARTING_BALANCE = 25000;
@@ -42,16 +44,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [ownedItems, setOwnedItems] = useState<ShopItem[]>([]);
     const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
 
-    // ── Real Web3 wallet (Base Sepolia testnet) ─────────────────────────────────
-    // This is a genuine on-chain wallet connection (MetaMask, etc.) — the address
-    // below comes straight from the browser wallet, not from typed-in or
-    // AI-generated data. It is the source of truth for `walletAddress`.
+    // ── EVM wallet (wagmi — Ethereum, Polygon, Base Sepolia) ────────────────────
     const { address: chainAddress, isConnected: isWalletConnected, connector: activeConnector } = useAccount();
     const { connectAsync, connectors, isPending: isConnectingWallet } = useConnect();
     const { disconnect: disconnectChainWallet } = useDisconnect();
     const chainId = useChainId();
     const { switchChainAsync } = useSwitchChain();
-    const isCorrectChain = isWalletConnected && chainId === TARGET_CHAIN.id;
+    // "Correct" chain = any chain DigiPawns actively supports (ETH, Polygon, Base Sepolia)
+    const isCorrectChain = isWalletConnected && (SUPPORTED_EVM_CHAIN_IDS as readonly number[]).includes(chainId);
+    const connectedEvmChain = SUPPORTED_EVM_CHAINS.find(c => c.id === chainId);
+    const chainName = connectedEvmChain?.name ?? 'Unknown Network';
+
+    // ── Solana wallet (@solana/wallet-adapter-react) ─────────────────────────────
+    // Completely separate from wagmi — Solana uses a different signing model.
+    const {
+        publicKey: solanaPublicKey,
+        connected: isSolanaConnected,
+        wallet: selectedSolanaWallet,
+        select: selectSolanaWallet,
+        connect: connectSolanaFn,
+        disconnect: disconnectSolanaFn,
+    } = useSolanaWallet();
+    const solanaAddress = solanaPublicKey?.toBase58() ?? null;
 
     // `connectorId` lets the caller pick which wallet to use (browser
     // extension, Coinbase Wallet, WalletConnect QR, ...). Defaults to the
@@ -81,14 +95,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         }
     }, [connectAsync, connectors, switchChainAsync]);
 
-    // Persist the real connected address onto the signed-in user's profile so
-    // friends/admin views (which read from Firestore, not live wagmi state) can
-    // still see it.
+    // Auto-connect Solana wallet after the user selects one in the picker.
+    useEffect(() => {
+        if (selectedSolanaWallet && !isSolanaConnected) {
+            connectSolanaFn().catch(() => toast.error('Solana wallet connection failed.'));
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedSolanaWallet?.adapter.name]);
+
+    // Persist EVM address to the user's Firestore profile whenever it changes.
     useEffect(() => {
         if (userId && chainAddress) {
             setDoc(doc(db, 'users', userId), { walletAddress: chainAddress }, { merge: true }).catch(console.error);
         }
     }, [userId, chainAddress]);
+
+    // Persist Solana address to Firestore when it changes.
+    useEffect(() => {
+        if (userId && solanaAddress) {
+            setDoc(doc(db, 'users', userId), { solanaAddress }, { merge: true }).catch(console.error);
+        }
+    }, [userId, solanaAddress]);
 
     // ── Firebase Auth ──────────────────────────────────────────────────────────
     useEffect(() => {
@@ -523,18 +550,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const switchToCorrectChain = useCallback(async () => {
         try {
-            await switchChainAsync({ chainId: TARGET_CHAIN.id });
+            // Default to Ethereum mainnet for unsupported-chain users.
+            await switchChainAsync({ chainId: SUPPORTED_EVM_CHAINS[0].id });
         } catch {
-            toast.error(`Please switch your wallet to ${TARGET_CHAIN.name} manually.`);
+            toast.error('Please switch to Ethereum, Polygon, or Base Sepolia manually.');
         }
     }, [switchChainAsync]);
+
+    const connectSolanaWallet = useCallback((walletName: string) => {
+        selectSolanaWallet(walletName as WalletName<string>);
+        // Actual connect() is triggered by the useEffect watching selectedSolanaWallet
+    }, [selectSolanaWallet]);
+
+    const disconnectSolanaWallet = useCallback(async () => {
+        try { await disconnectSolanaFn(); } catch { /* ignore */ }
+    }, [disconnectSolanaFn]);
 
     const value: AppContextType = {
         isConnected, isAdmin, userId, walletAddress, loans, profile,
         notificationSettings, activityLog, friends, messages, collections,
         allUsers, allLoans, shopInventory, ownedItems,
-        isWalletConnected, isConnectingWallet, isCorrectChain, chainName: TARGET_CHAIN.name,
+        isWalletConnected, isConnectingWallet, isCorrectChain, chainName,
         walletOptions: WALLET_OPTIONS,
+        isSolanaConnected, solanaAddress,
+        connectSolanaWallet, disconnectSolanaWallet,
         navigate, connectWallet, disconnectWallet, connectRealWallet,
         openWalletPicker, switchToCorrectChain,
         disconnectChainWallet,
