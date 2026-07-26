@@ -1,6 +1,6 @@
 import { useReadContracts, useBalance, useAccount } from 'wagmi';
 import { erc20Abi } from 'viem';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { useAppContext } from '../contexts/AppContext';
@@ -33,6 +33,8 @@ export interface UseTokenBalancesResult {
     isSolLoading: boolean;
     isEvmConnected: boolean;
     isSolanaConnected: boolean;
+    /** Manually re-fetch all balances (e.g. after a swap completes). */
+    refetch: () => void;
 }
 
 function bigintToFloat(raw: bigint, decimals = 18): number {
@@ -48,8 +50,11 @@ export function useTokenBalances(): UseTokenBalancesResult {
 
     const enabled = isEvmConnected && !!evmAddress;
 
+    // ── Manual refetch trigger (incremented to force Solana useEffect to re-run) ─
+    const [solRefetchTrigger, setSolRefetchTrigger] = useState(0);
+
     // ── ERC-20 reads ─────────────────────────────────────────────────────────────
-    const { data: erc20Data, isLoading: isErc20Loading } = useReadContracts({
+    const { data: erc20Data, isLoading: isErc20Loading, refetch: refetchErc20 } = useReadContracts({
         contracts: [
             {
                 address: DIG_ADDRESS,
@@ -96,6 +101,8 @@ export function useTokenBalances(): UseTokenBalancesResult {
 
         let cancelled = false;
         setIsSolLoading(true);
+        // solRefetchTrigger is listed in deps so incrementing it forces a re-fetch
+        void solRefetchTrigger;
 
         let owner: PublicKey;
         let mint: PublicKey;
@@ -125,7 +132,8 @@ export function useTokenBalances(): UseTokenBalancesResult {
         });
 
         return () => { cancelled = true; };
-    }, [isSolanaConnected, solanaAddress, connection]);
+    // solRefetchTrigger increments on manual refetch to force a re-run
+    }, [isSolanaConnected, solanaAddress, connection, solRefetchTrigger]);
 
     // ── Assemble result ──────────────────────────────────────────────────────────
     const digRaw    = erc20Data?.[0]?.result;
@@ -140,11 +148,17 @@ export function useTokenBalances(): UseTokenBalancesResult {
         SOL:      isSolanaConnected ? nativeSolBalance : null,
     };
 
+    const refetch = useCallback(() => {
+        void refetchErc20();
+        setSolRefetchTrigger(t => t + 1);
+    }, [refetchErc20]);
+
     return {
         balances,
         isEvmLoading: isErc20Loading || isEthLoading || isMaticLoading,
         isSolLoading,
         isEvmConnected,
         isSolanaConnected,
+        refetch,
     };
 }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CalculatorIcon } from './IconComponents';
 import { useTokenBalances } from '../hooks/useTokenBalances';
 import { usePrices } from '../hooks/usePrices';
+import SwapModal, { type SwapToken } from './SwapModal';
 
 interface LoanCalculatorModalProps {
     isOpen: boolean;
@@ -29,6 +30,8 @@ const LoanCalculatorModal: React.FC<LoanCalculatorModalProps> = ({ isOpen, onClo
     const [rate, setRate]         = useState(8.5);
     const [term, setTerm]         = useState(30);
     const [tokenIdx, setTokenIdx] = useState(0);
+    const [swapOpen, setSwapOpen]   = useState(false);
+    const [swapToken, setSwapToken] = useState<SwapToken>('DIG');
 
     const [totalInterest, setTotalInterest]   = useState(0);
     const [totalRepayment, setTotalRepayment] = useState(0);
@@ -166,13 +169,37 @@ const LoanCalculatorModal: React.FC<LoanCalculatorModalProps> = ({ isOpen, onClo
                                                             <div className="text-gray-600">${fmt(info.usdValue)}</div>
                                                         )}
                                                         {info.isSufficient === false && (
-                                                            <div className="text-red-400/80 font-bold">Insufficient</div>
+                                                            <>
+                                                                <div className="text-red-400/80 font-bold">Insufficient</div>
+                                                                <button
+                                                                    onClick={() => {
+                                                                        const tok = t.ticker === 'DIG' ? 'DIG' : 'PC-ETH';
+                                                                        setSwapToken(tok as SwapToken);
+                                                                        setSwapOpen(true);
+                                                                    }}
+                                                                    className="mt-1 text-[9px] font-bold text-brand-gold border border-brand-gold/40 px-1.5 py-0.5 rounded hover:bg-brand-gold/10 transition-colors"
+                                                                >
+                                                                    Get {t.label} →
+                                                                </button>
+                                                            </>
                                                         )}
                                                     </>
                                                 ) : isPricesLoading ? (
                                                     <span>Loading…</span>
                                                 ) : (
-                                                    <span>0 {t.label}</span>
+                                                    <>
+                                                        <span>0 {t.label}</span>
+                                                        <button
+                                                            onClick={() => {
+                                                                const tok = t.ticker === 'DIG' ? 'DIG' : 'PC-ETH';
+                                                                setSwapToken(tok as SwapToken);
+                                                                setSwapOpen(true);
+                                                            }}
+                                                            className="mt-1 block text-[9px] font-bold text-brand-gold border border-brand-gold/40 px-1.5 py-0.5 rounded hover:bg-brand-gold/10 transition-colors"
+                                                        >
+                                                            Get {t.label} →
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         )}
@@ -247,6 +274,13 @@ const LoanCalculatorModal: React.FC<LoanCalculatorModalProps> = ({ isOpen, onClo
                     </p>
                 )}
             </div>
+
+            {/* Swap modal — opened when user clicks "Get $X →" */}
+            <SwapModal
+                isOpen={swapOpen}
+                onClose={() => setSwapOpen(false)}
+                defaultToken={swapToken}
+            />
         </div>
     );
 };

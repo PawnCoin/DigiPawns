@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTokenBalances } from '../hooks/useTokenBalances';
 import { usePrices } from '../hooks/usePrices';
 import { useAppContext } from '../contexts/AppContext';
+import SwapModal, { type SwapToken } from './SwapModal';
 
 interface TokenRow {
     key: keyof ReturnType<typeof useTokenBalances>['balances'];
@@ -10,15 +11,17 @@ interface TokenRow {
     chainColor: string;
     logo: string | null;
     priceKey: keyof ReturnType<typeof usePrices>['prices'];
+    /** If set, shows a "Get" button that opens the swap modal on this token */
+    swapToken?: SwapToken;
 }
 
 const TOKEN_ROWS: TokenRow[] = [
-    { key: 'DIG',      label: '$DIG',  chain: 'Ethereum', chainColor: '#627eea', logo: '/dig-logo.png',  priceKey: 'dig'   },
-    { key: 'PC-ETH',   label: '$PC',   chain: 'Ethereum', chainColor: '#627eea', logo: '/pc-logo.png',   priceKey: 'pc'    },
-    { key: 'PC-SOL',   label: '$PC',   chain: 'Solana',   chainColor: '#9945ff', logo: '/pc-logo.png',   priceKey: 'pc'    },
-    { key: 'ETH',      label: 'ETH',   chain: 'Ethereum', chainColor: '#627eea', logo: null,             priceKey: 'eth'   },
-    { key: 'MATIC',    label: 'MATIC', chain: 'Polygon',  chainColor: '#8247e5', logo: null,             priceKey: 'matic' },
-    { key: 'SOL',      label: 'SOL',   chain: 'Solana',   chainColor: '#9945ff', logo: null,             priceKey: 'sol'   },
+    { key: 'DIG',    label: '$DIG',  chain: 'Ethereum', chainColor: '#627eea', logo: '/dig-logo.png', priceKey: 'dig',  swapToken: 'DIG'    },
+    { key: 'PC-ETH', label: '$PC',   chain: 'Ethereum', chainColor: '#627eea', logo: '/pc-logo.png',  priceKey: 'pc',   swapToken: 'PC-ETH' },
+    { key: 'PC-SOL', label: '$PC',   chain: 'Solana',   chainColor: '#9945ff', logo: '/pc-logo.png',  priceKey: 'pc',   swapToken: 'PC-SOL' },
+    { key: 'ETH',    label: 'ETH',   chain: 'Ethereum', chainColor: '#627eea', logo: null,            priceKey: 'eth'   },
+    { key: 'MATIC',  label: 'MATIC', chain: 'Polygon',  chainColor: '#8247e5', logo: null,            priceKey: 'matic' },
+    { key: 'SOL',    label: 'SOL',   chain: 'Solana',   chainColor: '#9945ff', logo: null,            priceKey: 'sol'   },
 ];
 
 const NATIVE_ICONS: Record<string, string> = {
@@ -50,17 +53,30 @@ const Skeleton: React.FC = () => (
 );
 
 const TokenBalancesCard: React.FC = () => {
-    const { balances, isEvmLoading, isSolLoading, isEvmConnected, isSolanaConnected } = useTokenBalances();
+    const { balances, isEvmLoading, isSolLoading, isEvmConnected, isSolanaConnected, refetch } = useTokenBalances();
     const { prices, isLoading: isPricesLoading, lastUpdated, refresh } = usePrices();
     const { openWalletPicker } = useAppContext();
 
+    const [swapOpen, setSwapOpen]           = useState(false);
+    const [swapToken, setSwapToken]         = useState<SwapToken>('DIG');
+
     const neitherConnected = !isEvmConnected && !isSolanaConnected;
 
+    const openSwap = (tok: SwapToken) => {
+        setSwapToken(tok);
+        setSwapOpen(true);
+    };
+
+    const handleSwapComplete = () => {
+        refetch();
+        refresh();
+    };
+
     const renderBalance = (row: TokenRow) => {
-        const isLoading = row.chain === 'Solana' ? isSolLoading : isEvmLoading;
+        const isLoading   = row.chain === 'Solana' ? isSolLoading : isEvmLoading;
         const isConnected = row.chain === 'Solana' ? isSolanaConnected : isEvmConnected;
-        const balance = balances[row.key];
-        const price   = prices[row.priceKey];
+        const balance     = balances[row.key];
+        const price       = prices[row.priceKey];
 
         if (!isConnected) {
             return <span className="text-gray-600 text-sm">—</span>;
@@ -86,97 +102,144 @@ const TokenBalancesCard: React.FC = () => {
     };
 
     return (
-        <div className="mb-6 rounded-xl border border-yellow-900/30 bg-brand-navy/60 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3 border-b border-yellow-900/20">
-                <h3 className="text-sm font-bold text-white tracking-wide flex items-center gap-2">
-                    💰 Token Balances
-                </h3>
-                <div className="flex items-center gap-3">
-                    {lastUpdated && (
-                        <span className="text-xs text-gray-600">
-                            Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                    )}
-                    <button
-                        onClick={refresh}
-                        title="Refresh prices"
-                        className="text-gray-500 hover:text-brand-gold transition-colors text-xs font-semibold"
-                    >
-                        ↻ Refresh
-                    </button>
+        <>
+            <div className="mb-6 rounded-xl border border-yellow-900/30 bg-brand-navy/60 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-yellow-900/20">
+                    <h3 className="text-sm font-bold text-white tracking-wide flex items-center gap-2">
+                        💰 Token Balances
+                    </h3>
+                    <div className="flex items-center gap-3">
+                        {lastUpdated && (
+                            <span className="text-xs text-gray-600">
+                                Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        )}
+                        <button
+                            onClick={handleSwapComplete}
+                            title="Refresh prices and balances"
+                            className="text-gray-500 hover:text-brand-gold transition-colors text-xs font-semibold"
+                        >
+                            ↻ Refresh
+                        </button>
+                    </div>
                 </div>
+
+                {neitherConnected ? (
+                    /* No wallets — prompt */
+                    <div className="flex items-center justify-between gap-4 px-5 py-4">
+                        <div>
+                            <p className="text-sm text-gray-300 font-semibold">No wallet connected</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Connect EVM or Solana wallet to see live balances.</p>
+                        </div>
+                        <button
+                            onClick={openWalletPicker}
+                            className="btn-metallic-gold text-xs font-bold py-1.5 px-3 rounded-lg whitespace-nowrap"
+                        >
+                            Connect Wallet
+                        </button>
+                    </div>
+                ) : (
+                    <div className="divide-y divide-yellow-900/10">
+                        {TOKEN_ROWS.map(row => {
+                            const isConnected = row.chain === 'Solana' ? isSolanaConnected : isEvmConnected;
+                            const price       = prices[row.priceKey];
+
+                            return (
+                                <div
+                                    key={`${row.key}-${row.chain}`}
+                                    className={`flex items-center justify-between px-5 py-3 transition-colors ${!isConnected ? 'opacity-40' : 'hover:bg-white/2'}`}
+                                >
+                                    {/* Left: token logo + label + chain */}
+                                    <div className="flex items-center gap-3">
+                                        {row.logo ? (
+                                            <img src={row.logo} alt={row.label} className="w-7 h-7 rounded-full border border-yellow-900/40 object-cover" />
+                                        ) : (
+                                            <div className="w-7 h-7 rounded-full flex items-center justify-center bg-brand-dark/60 border border-yellow-900/30 text-base">
+                                                {NATIVE_ICONS[row.label] || '?'}
+                                            </div>
+                                        )}
+                                        <div>
+                                            <span className="text-white font-semibold text-sm">{row.label}</span>
+                                            <span
+                                                className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
+                                                style={{ color: row.chainColor, background: row.chainColor + '25', border: `1px solid ${row.chainColor}40` }}
+                                            >
+                                                {row.chain}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: balance | price | "Get" button */}
+                                    <div className="flex items-center gap-4">
+                                        {/* Live price */}
+                                        <div className="hidden sm:block text-right">
+                                            <div className="text-xs text-gray-500">Price</div>
+                                            <div className="text-xs text-gray-400 font-mono tabular-nums">
+                                                {isPricesLoading
+                                                    ? <Skeleton />
+                                                    : price !== null
+                                                    ? fmtPrice(price)
+                                                    : <span className="text-gray-600">N/A</span>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        {/* Balance + USD value */}
+                                        {renderBalance(row)}
+
+                                        {/* "Get" button — only for discount tokens, only when wallet connected */}
+                                        {row.swapToken && isConnected && (
+                                            <button
+                                                onClick={() => openSwap(row.swapToken!)}
+                                                title={`Swap for ${row.label}`}
+                                                className="shrink-0 text-[11px] font-bold px-2.5 py-1 rounded-lg border border-brand-gold/40 text-brand-gold hover:bg-brand-gold/10 transition-colors"
+                                            >
+                                                Get
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+
+                {/* "Get $DIG / $PC" prompt banner — only when connected but no discount tokens */}
+                {(isEvmConnected || isSolanaConnected) && (
+                    <div className="border-t border-yellow-900/20 px-5 py-3 flex items-center justify-between gap-3">
+                        <p className="text-xs text-gray-500">
+                            💡 Hold $DIG or $PC to unlock <span className="text-brand-gold font-semibold">up to 25% off</span> loan fees
+                        </p>
+                        <div className="flex gap-2 shrink-0">
+                            {isEvmConnected && (
+                                <button
+                                    onClick={() => openSwap('DIG')}
+                                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg btn-metallic-gold"
+                                >
+                                    Get $DIG
+                                </button>
+                            )}
+                            {(isEvmConnected || isSolanaConnected) && (
+                                <button
+                                    onClick={() => openSwap(isSolanaConnected && !isEvmConnected ? 'PC-SOL' : 'PC-ETH')}
+                                    className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-yellow-900/40 text-gray-300 hover:text-white transition-colors"
+                                >
+                                    Get $PC
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
-            {neitherConnected ? (
-                /* No wallets — prompt */
-                <div className="flex items-center justify-between gap-4 px-5 py-4">
-                    <div>
-                        <p className="text-sm text-gray-300 font-semibold">No wallet connected</p>
-                        <p className="text-xs text-gray-500 mt-0.5">Connect EVM or Solana wallet to see live balances.</p>
-                    </div>
-                    <button
-                        onClick={openWalletPicker}
-                        className="btn-metallic-gold text-xs font-bold py-1.5 px-3 rounded-lg whitespace-nowrap"
-                    >
-                        Connect Wallet
-                    </button>
-                </div>
-            ) : (
-                <div className="divide-y divide-yellow-900/10">
-                    {TOKEN_ROWS.map(row => {
-                        const isConnected = row.chain === 'Solana' ? isSolanaConnected : isEvmConnected;
-                        const price = prices[row.priceKey];
-
-                        return (
-                            <div
-                                key={`${row.key}-${row.chain}`}
-                                className={`flex items-center justify-between px-5 py-3 transition-colors ${!isConnected ? 'opacity-40' : 'hover:bg-white/2'}`}
-                            >
-                                {/* Left: token logo + label + chain */}
-                                <div className="flex items-center gap-3">
-                                    {row.logo ? (
-                                        <img src={row.logo} alt={row.label} className="w-7 h-7 rounded-full border border-yellow-900/40 object-cover" />
-                                    ) : (
-                                        <div className="w-7 h-7 rounded-full flex items-center justify-center bg-brand-dark/60 border border-yellow-900/30 text-base">
-                                            {NATIVE_ICONS[row.label] || '?'}
-                                        </div>
-                                    )}
-                                    <div>
-                                        <span className="text-white font-semibold text-sm">{row.label}</span>
-                                        <span
-                                            className="ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full"
-                                            style={{ color: row.chainColor, background: row.chainColor + '25', border: `1px solid ${row.chainColor}40` }}
-                                        >
-                                            {row.chain}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Right: balance + USD value | live price */}
-                                <div className="flex items-center gap-6">
-                                    {/* Live price */}
-                                    <div className="hidden sm:block text-right">
-                                        <div className="text-xs text-gray-500">Price</div>
-                                        <div className="text-xs text-gray-400 font-mono tabular-nums">
-                                            {isPricesLoading
-                                                ? <Skeleton />
-                                                : price !== null
-                                                ? fmtPrice(price)
-                                                : <span className="text-gray-600">N/A</span>
-                                            }
-                                        </div>
-                                    </div>
-
-                                    {/* Balance + USD value */}
-                                    {renderBalance(row)}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-        </div>
+            <SwapModal
+                isOpen={swapOpen}
+                onClose={() => setSwapOpen(false)}
+                defaultToken={swapToken}
+                onSwapComplete={handleSwapComplete}
+            />
+        </>
     );
 };
 
