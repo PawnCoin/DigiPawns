@@ -83,6 +83,53 @@ Each imported NFT card has:
 - `components/SettingsView.tsx` — Portfolio + Browse Wallet UI
 - `components/BrowseSellModal.tsx` — pre-filled Sell to Shop modal
 
+## Pre-launch operations runbook
+
+### 1 — Deploy Firestore security rules (one-time, required before going public)
+
+The rules file `firestore.rules` is fully written and version-controlled. Deployment is **not** automated because Firebase Security Rules deployment requires browser-based OAuth authentication, which can't run in a server-side environment like Replit.
+
+**Option A — Firebase Console (easiest, no CLI needed):**
+1. Open [console.firebase.google.com](https://console.firebase.google.com) and select project `gen-lang-client-0700637310`
+2. Left sidebar → **Firestore Database** → **Rules** tab
+3. Replace the contents with `firestore.rules` from this repo
+4. Click **Publish**
+5. Confirm the "Rules published" banner appears — rules are now enforced
+
+**Option B — Firebase CLI (from your local machine):**
+```bash
+# Install and login once (opens browser):
+npx firebase login
+
+# Deploy from the repo root:
+npm run deploy:rules
+# or: npx firebase deploy --only firestore:rules --project gen-lang-client-0700637310
+```
+The `firebase.json` is configured for the named database `ai-studio-58011ff9-420a-4328-a095-6c3ccf3d4217`.
+
+**Verification:** After deploying, open the Firebase Console → Firestore → Rules tab and confirm the timestamp says "Published just now" and the ruleset matches `firestore.rules`.
+
+> ⚠️ Until these rules are deployed, Firestore uses permissive default rules and anyone with the Firebase config (embedded in the JS bundle) can read/write all data.
+
+---
+
+### 2 — Platform wallet secrets (already set)
+
+`PLATFORM_WALLET` and `PLATFORM_SOL_WALLET` are saved as Replit env vars. Token payments ($DIG, $PC-ETH, $PC-SOL) route to these addresses automatically. If addresses ever need to change, update them in Replit's Secrets/Env panel and restart the dev server.
+
+---
+
+### 3 — WalletConnect domain allowlist
+
+WalletConnect QR-code connections fail with `Origin not found on Allowlist` if the app's domain isn't registered. Fix:
+1. Go to [cloud.reown.com](https://cloud.reown.com) and sign in
+2. Open the project matching your `WALLETCONNECT_PROJECT_ID` secret
+3. Navigate to **Allowed Origins** (or **Domains**)
+4. Add `https://*.replit.dev` (dev/preview) and your production domain (after publishing)
+5. Save — changes take effect immediately, no redeploy needed
+
+---
+
 ## Notes
 - `index.html` still contains a leftover `<script type="importmap">` pointing at `aistudiocdn.com` from the original AI Studio scaffold. It is unused now that the project runs through Vite/npm (Vite resolves imports from `node_modules`), so it's safe to ignore or remove later.
 - See `.agents/memory/digipawns-arch.md` for deeper architecture notes (Firestore collections, admin detection, messaging, NFT transfer flow).
