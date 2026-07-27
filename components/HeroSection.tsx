@@ -1,10 +1,13 @@
 import React from 'react';
+import useRouter from '../hooks/useRouter';
 
 interface HeroSectionProps {
     onCalculatorOpen: () => void;
 }
 
 const HeroSection: React.FC<HeroSectionProps> = ({ onCalculatorOpen }) => {
+  const { navigate } = useRouter();
+
   const handleScrollClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     const href = e.currentTarget.getAttribute('href');
@@ -42,6 +45,13 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onCalculatorOpen }) => {
             className="bg-transparent border-2 border-yellow-900/50 text-gray-300 font-bold py-4 px-10 rounded-lg text-lg hover:bg-brand-navy hover:border-brand-gold/50 transition-all duration-300 transform hover:scale-105"
           >
             Loan Calculator
+          </button>
+          <button
+            onClick={() => navigate('/video')}
+            className="bg-brand-navy border border-blue-500/30 text-blue-400 font-bold py-4 px-8 rounded-lg text-lg hover:bg-blue-900/30 hover:border-blue-400/50 transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            Watch Promo
           </button>
         </div>
       </div>

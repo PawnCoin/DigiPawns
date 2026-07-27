@@ -5,6 +5,9 @@
     <link rel="icon" type="image/png" href="/digipawns-logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DigiPawns - Digital Asset Pawn Shop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,800;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
       /* ── Marquee animations ── */
@@ -97,6 +100,10 @@
       tailwind.config = {
         theme: {
           extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+              serif: ['"Playfair Display"', 'serif'],
+            },
             colors: {
               'brand-gold':       '#D4A017',
               'brand-gold-dark':  '#B8860B',

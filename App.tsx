@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import ShopPage from './pages/ShopPage';
+import VideoTemplate from './components/video/VideoTemplate';
 import { Toaster } from 'sonner';
 
 const App: React.FC = () => {
@@ -14,22 +15,22 @@ const App: React.FC = () => {
   const renderPage = () => {
     switch (route) {
       case '/dashboard':
-        return <DashboardPage />;
+        return <Layout><DashboardPage /></Layout>;
       case '/admin':
-        return <AdminPage />;
+        return <Layout><AdminPage /></Layout>;
       case '/shop':
-        return <ShopPage />;
+        return <Layout><ShopPage /></Layout>;
+      case '/video':
+        return <VideoTemplate />;
       case '/':
       default:
-        return <HomePage />;
+        return <Layout><HomePage /></Layout>;
     }
   };
 
   return (
     <AppProvider>
-      <Layout>
-        {renderPage()}
-      </Layout>
+      {renderPage()}
       <Toaster theme="dark" position="bottom-right" />
     </AppProvider>
   );
