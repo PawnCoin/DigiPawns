@@ -125,7 +125,10 @@ WalletConnect QR-code connections fail with `Origin not found on Allowlist` if t
 1. Go to [cloud.reown.com](https://cloud.reown.com) and sign in
 2. Open the project matching your `WALLETCONNECT_PROJECT_ID` secret
 3. Navigate to **Allowed Origins** (or **Domains**)
-4. Add `https://*.replit.dev` (dev/preview) and your production domain (after publishing)
+4. Add the following origins (if not already present):
+   - `https://*.replit.dev` (dev/preview workspace)
+   - `https://digi-pawns.replit.app` (Replit-generated production URL)
+   - `https://digipawns.online` (custom production domain — primary public URL)
 5. Save — changes take effect immediately, no redeploy needed
 
 ---
