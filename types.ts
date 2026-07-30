@@ -208,7 +208,7 @@ export interface AppContextType {
   navigate: (path: string) => void;
   connectWallet: () => Promise<void>;
   disconnectWallet: () => void;
-  connectRealWallet: (connectorId?: string) => Promise<void>;
+  connectRealWallet: (connectorId?: string) => Promise<{ success: boolean; errorType?: 'allowlist' | 'cancelled' | 'generic' }>;
   /** Opens the crypto wallet picker modal from anywhere in the app */
   openWalletPicker: () => void;
   /** Switches the connected EVM wallet to a supported chain */

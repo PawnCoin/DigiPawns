@@ -70,12 +70,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // `connectorId` lets the caller pick which wallet to use (browser
     // extension, Coinbase Wallet, WalletConnect QR, ...). Defaults to the
     // first available connector for backwards-compatible single-click use.
-    const connectRealWallet = useCallback(async (connectorId?: string) => {
+    const connectRealWallet = useCallback(async (connectorId?: string): Promise<{ success: boolean; errorType?: 'allowlist' | 'cancelled' | 'generic' }> => {
         try {
             const chosenConnector = (connectorId && connectors.find(c => c.id === connectorId)) || connectors[0];
             if (!chosenConnector) {
                 toast.error('No wallet connectors are available.');
-                return;
+                return { success: false, errorType: 'generic' };
             }
             const result = await connectAsync({ connector: chosenConnector });
             if (result.chainId !== TARGET_CHAIN.id) {
@@ -83,14 +83,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 catch { toast.error(`Please switch your wallet to ${TARGET_CHAIN.name} manually.`); }
             }
             toast.success('Wallet connected.');
+            return { success: true };
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             if (msg.includes('Allowlist') || msg.includes('allowlist') || msg.includes('not found on')) {
-                toast.error("WalletConnect isn't configured for this domain — use MetaMask or Coinbase Wallet instead.");
+                toast.error("WalletConnect isn't configured for this domain — add it at cloud.reown.com.");
+                return { success: false, errorType: 'allowlist' };
             } else if (msg.includes('rejected') || msg.includes('denied') || msg.includes('user rejected')) {
                 toast.error('Connection cancelled.');
+                return { success: false, errorType: 'cancelled' };
             } else {
                 toast.error('Wallet connection failed — try a different wallet or check your browser extension.');
+                return { success: false, errorType: 'generic' };
             }
         }
     }, [connectAsync, connectors, switchChainAsync]);
