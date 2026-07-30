@@ -31,7 +31,12 @@ const Header: React.FC = () => {
     else { scrollTo(); }
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnectWallet = () => {
+    disconnectChainWallet();
+    setIsDropdownOpen(false);
+  };
+
+  const handleSignOut = () => {
     disconnectWallet();
     if (isWalletConnected) disconnectChainWallet();
     setIsDropdownOpen(false);
@@ -170,14 +175,24 @@ const Header: React.FC = () => {
                         >
                           <WalletIcon className="w-4 h-4" /><span>Connect Wallet</span>
                         </button>
-                      ) : !isCorrectChain ? (
-                        <button
-                          onClick={() => { setIsDropdownOpen(false); switchToCorrectChain(); }}
-                          className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 flex items-center gap-2"
-                        >
-                          <span>⚠️</span><span>Switch to Supported Chain</span>
-                        </button>
-                      ) : null}
+                      ) : (
+                        <>
+                          {!isCorrectChain && (
+                            <button
+                              onClick={() => { setIsDropdownOpen(false); switchToCorrectChain(); }}
+                              className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/20 flex items-center gap-2"
+                            >
+                              <span>⚠️</span><span>Switch to Supported Chain</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={handleDisconnectWallet}
+                            className="w-full text-left px-4 py-2 text-sm text-green-400/70 hover:bg-green-900/20 flex items-center gap-2"
+                          >
+                            <WalletIcon className="w-4 h-4" /><span>Disconnect EVM Wallet</span>
+                          </button>
+                        </>
+                      )}
                       {!isSolanaConnected ? (
                         <button
                           onClick={() => { setIsDropdownOpen(false); openWalletPicker(); }}
@@ -201,7 +216,7 @@ const Header: React.FC = () => {
                       )}
 
                       <div className="mt-1 pt-1 border-t border-yellow-900/20">
-                        <button onClick={handleDisconnect} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/30 hover:text-red-300 flex items-center gap-2">
+                        <button onClick={handleSignOut} className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-900/30 hover:text-red-300 flex items-center gap-2">
                           <LogOutIcon className="w-4 h-4" /><span>Sign Out</span>
                         </button>
                       </div>
