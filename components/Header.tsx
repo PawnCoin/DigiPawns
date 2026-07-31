@@ -136,14 +136,25 @@ const Header: React.FC = () => {
                 </span>
               ) : (
                 /* Unsupported chain: Switch Network */
-                <button
-                  onClick={switchToCorrectChain}
-                  title="Switch to Ethereum, Polygon, or Base Sepolia"
-                  className="hidden sm:flex items-center gap-1.5 text-xs font-semibold py-1.5 px-3 rounded-lg border border-red-700/50 bg-red-900/20 text-red-400 hover:bg-red-900/40 transition-colors"
-                >
-                  <span className="w-2 h-2 rounded-full bg-red-400" />
-                  Wrong Network
-                </button>
+                <>
+                  {/* Mobile: compact red dot button */}
+                  <button
+                    onClick={switchToCorrectChain}
+                    title="Wrong network — tap to switch"
+                    className="flex sm:hidden items-center justify-center w-8 h-8 rounded-lg border border-red-700/50 bg-red-900/20 text-red-400 hover:bg-red-900/40 transition-colors"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse" />
+                  </button>
+                  {/* Desktop: full pill */}
+                  <button
+                    onClick={switchToCorrectChain}
+                    title="Switch to Ethereum, Polygon, or Base Sepolia"
+                    className="hidden sm:flex items-center gap-1.5 text-xs font-semibold py-1.5 px-3 rounded-lg border border-red-700/50 bg-red-900/20 text-red-400 hover:bg-red-900/40 transition-colors"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                    Wrong Network
+                  </button>
+                </>
               )
             ) : (
               /* No EVM wallet: Connect Wallet button */
