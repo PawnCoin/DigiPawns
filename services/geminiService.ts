@@ -1,11 +1,37 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { NftAppraisal, FeaturedNftCategory } from '../types';
 
+// Stable model IDs available on all API key tiers.
+// gemini-2.0-flash: fast, capable, broadly accessible.
+const APPRAISAL_MODEL = "gemini-2.0-flash";
+const FEATURED_MODEL  = "gemini-2.0-flash";
+
+function getAiClient(): GoogleGenAI {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        throw new Error("Appraisal service is not configured — GEMINI_API_KEY is missing. Contact the site administrator.");
+    }
+    return new GoogleGenAI({ apiKey });
+}
+
+function classifyGeminiError(error: unknown): string {
+    if (error && typeof error === 'object') {
+        const e = error as { status?: number; message?: string };
+        if (e.status === 404) return "AI model not found — check the model name or API key access level.";
+        if (e.status === 429) return "AI service rate limit reached. Please try again in a moment.";
+        if (e.status === 403) return "AI service access denied — the API key may be invalid or expired.";
+        if (e.message?.includes('API_KEY') || e.message?.includes('api key')) {
+            return "AI service is not configured correctly. Contact the site administrator.";
+        }
+    }
+    return "The AI service may be temporarily unavailable. Please try again.";
+}
+
 export const getNftAppraisal = async (
     nftInfo: { contractAddress: string; tokenId: string; market: string }
 ): Promise<NftAppraisal> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = getAiClient();
 
         const { contractAddress, tokenId, market } = nftInfo;
 
@@ -51,7 +77,7 @@ export const getNftAppraisal = async (
         };
 
         const result = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: APPRAISAL_MODEL,
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -67,13 +93,13 @@ export const getNftAppraisal = async (
 
     } catch (error) {
         console.error("Error getting NFT appraisal from Gemini:", error);
-        throw new Error("Failed to appraise NFT. The AI service may be temporarily unavailable.");
+        throw new Error(`Failed to appraise NFT. ${classifyGeminiError(error)}`);
     }
 };
 
 export const getFeaturedNfts = async (): Promise<FeaturedNftCategory[]> => {
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = getAiClient();
         const prompt = `
             You are a creative NFT market analyst for a high-end digital pawn shop called DigiPawns.
             Generate a list of 6 distinct and currently trending or interesting NFT categories.
@@ -112,7 +138,7 @@ export const getFeaturedNfts = async (): Promise<FeaturedNftCategory[]> => {
         };
 
         const result = await ai.models.generateContent({
-            model: "gemini-2.5-pro",
+            model: FEATURED_MODEL,
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -128,6 +154,6 @@ export const getFeaturedNfts = async (): Promise<FeaturedNftCategory[]> => {
 
     } catch (error) {
         console.error("Error getting featured NFTs from Gemini:", error);
-        throw new Error("Failed to load featured collections. The AI service may be encountering issues.");
+        throw new Error(`Failed to load featured collections. ${classifyGeminiError(error)}`);
     }
 }
