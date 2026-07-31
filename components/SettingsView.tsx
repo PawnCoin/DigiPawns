@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { WalletIcon } from './IconComponents';
-import type { Nft } from '../types';
+import type { Nft, WatchedWallet } from '../types';
 import { useAppContext } from '../contexts/AppContext';
 import { fetchNftsForWallet } from '../services/nftService';
 import {
@@ -99,7 +99,11 @@ type DataSource = 'alchemy' | 'opensea' | 'both';
 type PortfolioTab = 'my-wallet' | 'browse';
 
 const SettingsView: React.FC = () => {
-    const { navigate, walletAddress, isWalletConnected, isConnectingWallet, isCorrectChain, chainName, disconnectChainWallet, openWalletPicker } = useAppContext();
+    const {
+        navigate, walletAddress, isWalletConnected, isConnectingWallet, isCorrectChain, chainName,
+        disconnectChainWallet, openWalletPicker,
+        isConnected, watchedWallets, saveWatchedWallet, removeWatchedWallet,
+    } = useAppContext();
     const [portfolioTab, setPortfolioTab] = useState<PortfolioTab>('my-wallet');
 
     // ── My Wallet state ───────────────────────────────────────────────────
@@ -146,6 +150,11 @@ const SettingsView: React.FC = () => {
     // Sell modal state
     const [sellTarget, setSellTarget] = useState<(Nft & { chain?: string }) | null>(null);
 
+    // Save-wallet state
+    const [saveLabel, setSaveLabel] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
+    const [savedSuccess, setSavedSuccess] = useState(false);
+
     const hasOpenSeaKey = !!process.env.OPENSEA_API_KEY;
 
     const toggleChain = (chainId: string) => {
@@ -161,10 +170,12 @@ const SettingsView: React.FC = () => {
         });
     };
 
-    const handleBrowse = async () => {
-        const raw = browseInput.trim();
+    const handleBrowse = async (overrideInput?: string) => {
+        const raw = (overrideInput ?? browseInput).trim();
         if (!raw) return;
 
+        setSavedSuccess(false);
+        setSaveLabel('');
         setBrowseResult({ nfts: [], isLoading: true, error: null, resolvedAddress: null, totalFetched: 0 });
 
         // 1. Resolve input to an address
@@ -297,6 +308,30 @@ const SettingsView: React.FC = () => {
         );
     };
 
+    const handleSaveWallet = async () => {
+        if (!browseResult.resolvedAddress) return;
+        setIsSaving(true);
+        try {
+            const label = saveLabel.trim() || browseInput.trim() || browseResult.resolvedAddress;
+            await saveWatchedWallet(browseResult.resolvedAddress, label);
+            setSavedSuccess(true);
+            setSaveLabel('');
+        } catch {
+            // Toast already shown by saveWatchedWallet — nothing more to do here
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleLoadSaved = (w: WatchedWallet) => {
+        setBrowseInput(w.address);
+        handleBrowse(w.address);
+    };
+
+    const alreadySaved = browseResult.resolvedAddress
+        ? watchedWallets.some(w => w.address.toLowerCase() === browseResult.resolvedAddress!.toLowerCase())
+        : false;
+
     const renderBrowseWallet = () => (
         <div className="space-y-6">
             {/* Search bar */}
@@ -317,7 +352,7 @@ const SettingsView: React.FC = () => {
                         className="flex-1 bg-brand-dark border border-yellow-900/40 rounded-lg py-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-brand-gold/60 text-white placeholder-gray-600"
                     />
                     <button
-                        onClick={handleBrowse}
+                        onClick={() => handleBrowse()}
                         disabled={browseResult.isLoading || !browseInput.trim()}
                         className="btn-metallic-gold py-2 px-5 rounded-lg font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:[animation:none] disabled:!bg-gray-700 disabled:!text-gray-400 whitespace-nowrap"
                     >
@@ -360,6 +395,33 @@ const SettingsView: React.FC = () => {
                 </div>
             </div>
 
+            {/* Saved Wallets */}
+            {isConnected && watchedWallets.length > 0 && (
+                <div className="bg-brand-navy rounded-xl border border-yellow-900/40 p-4">
+                    <h5 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">⭐ Saved Wallets</h5>
+                    <div className="flex flex-col gap-2">
+                        {watchedWallets.map(w => (
+                            <div key={w.id} className="flex items-center gap-2 group">
+                                <button
+                                    onClick={() => handleLoadSaved(w)}
+                                    className="flex-1 flex items-center gap-3 text-left px-3 py-2 rounded-lg bg-brand-dark/60 hover:bg-brand-gold/10 border border-yellow-900/30 hover:border-brand-gold/50 transition-colors"
+                                >
+                                    <span className="text-sm font-semibold text-white truncate">{w.label}</span>
+                                    <span className="text-xs font-mono text-gray-500 shrink-0">{shortenAddress(w.address)}</span>
+                                </button>
+                                <button
+                                    onClick={() => removeWatchedWallet(w.id)}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-600 hover:text-red-400 p-1.5 rounded"
+                                    title="Remove saved wallet"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Results */}
             {browseResult.isLoading && <NftGridSkeleton />}
 
@@ -371,13 +433,41 @@ const SettingsView: React.FC = () => {
 
             {!browseResult.isLoading && !browseResult.error && browseResult.resolvedAddress && (
                 <>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
                         <p className="text-sm text-gray-400">
                             {browseResult.totalFetched > 0
                                 ? <><span className="text-white font-semibold">{browseResult.totalFetched}</span> NFTs found for <span className="font-mono text-brand-gold">{shortenAddress(browseResult.resolvedAddress)}</span></>
                                 : <>No NFTs found for <span className="font-mono text-brand-gold">{shortenAddress(browseResult.resolvedAddress)}</span> on selected chains.</>
                             }
                         </p>
+
+                        {/* Save button — only for signed-in users */}
+                        {isConnected && (
+                            <div className="flex items-center gap-2 shrink-0">
+                                {savedSuccess ? (
+                                    <span className="text-xs text-green-400 font-semibold">✓ Saved!</span>
+                                ) : alreadySaved ? (
+                                    <span className="text-xs text-gray-500 italic">Already saved</span>
+                                ) : (
+                                    <>
+                                        <input
+                                            type="text"
+                                            value={saveLabel}
+                                            onChange={e => setSaveLabel(e.target.value)}
+                                            placeholder="Label (optional)"
+                                            className="w-36 bg-brand-dark border border-yellow-900/40 rounded-lg py-1.5 px-3 text-xs focus:outline-none focus:ring-1 focus:ring-brand-gold/60 text-white placeholder-gray-600"
+                                        />
+                                        <button
+                                            onClick={handleSaveWallet}
+                                            disabled={isSaving}
+                                            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-brand-gold/20 border border-brand-gold/40 text-brand-gold hover:bg-brand-gold/30 transition-colors disabled:opacity-50 whitespace-nowrap"
+                                        >
+                                            {isSaving ? 'Saving…' : '⭐ Save Wallet'}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     {browseResult.nfts.length > 0 && (

@@ -117,5 +117,14 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if false;
     }
+
+    // ── Watched wallets (saved wallet bookmarks per user) ────────────────
+    // Only the owner can read, create, or delete their own saved wallets.
+    match /users/{userId}/watchedWallets/{walletId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+    }
   }
 }

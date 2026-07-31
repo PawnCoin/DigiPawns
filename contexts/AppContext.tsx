@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, ReactNode } from 'react';
-import type { Loan, AppContextType, UserProfile, NotificationSettings, Activity, ActivityType, Friend, Message, Collection, ShopItem } from '../types';
+import type { Loan, AppContextType, UserProfile, NotificationSettings, Activity, ActivityType, Friend, Message, Collection, ShopItem, WatchedWallet } from '../types';
 import useRouter from '../hooks/useRouter';
 import { toast } from 'sonner';
 import { auth, db } from '../firebase';
@@ -43,6 +43,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [allLoans, setAllLoans] = useState<Loan[]>([]);
     const [shopInventory, setShopInventory] = useState<ShopItem[]>([]);
     const [ownedItems, setOwnedItems] = useState<ShopItem[]>([]);
+    const [watchedWallets, setWatchedWallets] = useState<WatchedWallet[]>([]);
     const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
 
     // ── EVM wallet (wagmi — Ethereum, Polygon, Base Sepolia) ────────────────────
@@ -144,6 +145,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 setActivityLog([]);
                 setFriends([]);
                 setMessages([]);
+                setWatchedWallets([]);
             }
             setIsAuthReady(true);
         });
@@ -249,9 +251,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             setOwnedItems(fetched.sort((a, b) => new Date(b.listedAt || 0).getTime() - new Date(a.listedAt || 0).getTime()));
         }, console.error);
 
+        // Watched wallets
+        const watchedUnsub = onSnapshot(collection(db, 'users', userId, 'watchedWallets'), snap => {
+            const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() } as WatchedWallet));
+            setWatchedWallets(fetched.sort((a, b) => new Date(b.savedAt || 0).getTime() - new Date(a.savedAt || 0).getTime()));
+        }, console.error);
+
         return () => {
             profileUnsub(); notifUnsub(); loansUnsub(); activityUnsub();
-            friendsUnsub(); msgsInUnsub(); msgsOutUnsub(); ownedUnsub();
+            friendsUnsub(); msgsInUnsub(); msgsOutUnsub(); ownedUnsub(); watchedUnsub();
         };
     }, [isAuthReady, userId]);
 
@@ -579,6 +587,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         await deleteDoc(doc(db, 'collections', id));
     };
 
+    // ── Watched wallets ────────────────────────────────────────────────────────
+    const saveWatchedWallet = async (address: string, label: string) => {
+        if (!userId) {
+            toast.error('Sign in to save wallets.');
+            return;
+        }
+        try {
+            await addDoc(collection(db, 'users', userId, 'watchedWallets'), {
+                address,
+                label: label.trim() || address,
+                savedAt: new Date().toISOString(),
+            });
+        } catch (err) {
+            console.error('saveWatchedWallet failed:', err);
+            toast.error('Could not save wallet. Please try again.');
+            throw err;
+        }
+    };
+
+    const removeWatchedWallet = async (id: string) => {
+        if (!userId) return;
+        try {
+            await deleteDoc(doc(db, 'users', userId, 'watchedWallets', id));
+        } catch (err) {
+            console.error('removeWatchedWallet failed:', err);
+            toast.error('Could not remove saved wallet. Please try again.');
+            throw err;
+        }
+    };
+
     // `walletAddress` is the real connected on-chain address when a wallet is
     // linked; it falls back to whatever was last saved on the profile (e.g. on
     // first paint before wagmi's auto-reconnect resolves).
@@ -622,6 +660,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         searchUsers, addFriend, removeFriend, sendMessage, markConversationRead,
         adminUpdateUser, adminDeleteUser, adminUpdateLoan, adminDeleteLoan,
         adminAddCollection, adminUpdateCollection, adminDeleteCollection,
+        watchedWallets, saveWatchedWallet, removeWatchedWallet,
     };
 
     return (

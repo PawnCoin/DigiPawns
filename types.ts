@@ -131,6 +131,13 @@ export interface Collection {
     createdAt?: string;
 }
 
+export interface WatchedWallet {
+    id: string;
+    address: string;
+    label: string;
+    savedAt: string;
+}
+
 // Component-specific Props
 export interface NftMarketplace {
   name: string;
@@ -253,4 +260,9 @@ export interface AppContextType {
   adminAddCollection: (collection: Omit<Collection, 'id' | 'createdAt'>) => Promise<void>;
   adminUpdateCollection: (id: string, data: Partial<Collection>) => Promise<void>;
   adminDeleteCollection: (id: string) => Promise<void>;
+
+  // Watched wallets
+  watchedWallets: WatchedWallet[];
+  saveWatchedWallet: (address: string, label: string) => Promise<void>;
+  removeWatchedWallet: (id: string) => Promise<void>;
 }
