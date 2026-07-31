@@ -3,15 +3,23 @@ import { getNftAppraisal } from '../../services/geminiService';
 import { useAppContext } from '../../contexts/AppContext';
 import { NFT_MARKETPLACES, NFT_CATEGORIES } from '../../constants';
 import type { NftAppraisal } from '../../types';
+import { type AlchemyNetwork } from '../../services/nftService';
 import { toast } from 'sonner';
 
 // Pawn shops buy outright for less than market value since they take on resale risk.
 const SHOP_BUY_MULTIPLIER = 0.6;
 
+const NETWORK_OPTIONS: { label: string; value: AlchemyNetwork }[] = [
+    { label: 'Ethereum', value: 'eth-mainnet' },
+    { label: 'Polygon', value: 'polygon-mainnet' },
+    { label: 'Base', value: 'base-sepolia' },
+];
+
 const SellToShopPanel: React.FC = () => {
     const { sellNftToShop } = useAppContext();
     const [contractAddress, setContractAddress] = useState('');
     const [tokenId, setTokenId] = useState('');
+    const [selectedNetwork, setSelectedNetwork] = useState<AlchemyNetwork>('eth-mainnet');
     const [category, setCategory] = useState(NFT_CATEGORIES[0].name);
     const [isLoading, setIsLoading] = useState(false);
     const [isSelling, setIsSelling] = useState(false);
@@ -29,7 +37,7 @@ const SellToShopPanel: React.FC = () => {
         setError(null);
         setAppraisal(null);
         try {
-            const result = await getNftAppraisal({ contractAddress, tokenId, market: NFT_MARKETPLACES[0].name });
+            const result = await getNftAppraisal({ contractAddress, tokenId, market: NFT_MARKETPLACES[0].name, network: selectedNetwork });
             setAppraisal(result);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -62,6 +70,21 @@ const SellToShopPanel: React.FC = () => {
             <p className="text-center text-gray-400 mb-8">No loan, no waiting — get instant cash for your digital asset. We appraise it, you get paid.</p>
 
             <form onSubmit={handleAppraise}>
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Chain</label>
+                    <div className="flex gap-3">
+                        {NETWORK_OPTIONS.map(opt => (
+                            <button
+                                type="button"
+                                key={opt.value}
+                                onClick={() => setSelectedNetwork(opt.value)}
+                                className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-all duration-200 ${selectedNetwork === opt.value ? 'border-brand-gold text-brand-gold bg-brand-gold/10' : 'border-yellow-900/30 text-gray-400 hover:border-yellow-900/60'}`}
+                            >
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                         <label className="block text-sm font-medium text-gray-300 mb-1">Contract Address</label>

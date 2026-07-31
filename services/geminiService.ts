@@ -1,6 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { NftAppraisal, FeaturedNftCategory } from '../types';
-import { fetchCollectionFloorPrice } from './nftService';
+import { fetchCollectionFloorPrice, type AlchemyNetwork } from './nftService';
 
 // Stable model IDs available on all API key tiers.
 // gemini-2.0-flash: fast, capable, broadly accessible.
@@ -29,17 +29,17 @@ function classifyGeminiError(error: unknown): string {
 }
 
 export const getNftAppraisal = async (
-    nftInfo: { contractAddress: string; tokenId: string; market: string }
+    nftInfo: { contractAddress: string; tokenId: string; market: string; network?: AlchemyNetwork }
 ): Promise<NftAppraisal> => {
     try {
         const ai = getAiClient();
 
-        const { contractAddress, tokenId, market } = nftInfo;
+        const { contractAddress, tokenId, market, network } = nftInfo;
 
         // Fetch real collection floor price from Alchemy; proceed even if unavailable.
         let floorPriceLine = '';
         try {
-            const floorData = await fetchCollectionFloorPrice(contractAddress);
+            const floorData = await fetchCollectionFloorPrice(contractAddress, network);
             if (floorData) {
                 floorPriceLine = `- Current collection floor price: ${floorData.floorPriceEth} ETH (source: ${floorData.source})`;
             }

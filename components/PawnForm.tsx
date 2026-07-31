@@ -2,15 +2,23 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { NFT_MARKETPLACES } from '../constants';
 import type { NftMarketplace, NftAppraisal, Loan, LoanTerms } from '../types';
 import { getNftAppraisal } from '../services/geminiService';
+import { type AlchemyNetwork, CHAIN_TO_ALCHEMY_NETWORK } from '../services/nftService';
 import TransactionModal from './TransactionModal';
 import { useAppContext } from '../contexts/AppContext';
 
+
+const NETWORK_OPTIONS: { label: string; value: AlchemyNetwork }[] = [
+    { label: 'Ethereum', value: 'eth-mainnet' },
+    { label: 'Polygon', value: 'polygon-mainnet' },
+    { label: 'Base', value: 'base-sepolia' },
+];
 
 const PawnForm: React.FC = () => {
     const { addLoan, isConnected, isWalletConnected, connectWallet, openWalletPicker } = useAppContext();
     const [selectedMarket, setSelectedMarket] = useState<NftMarketplace>(NFT_MARKETPLACES[0]);
     const [contractAddress, setContractAddress] = useState<string>('');
     const [tokenId, setTokenId] = useState<string>('');
+    const [selectedNetwork, setSelectedNetwork] = useState<AlchemyNetwork>('eth-mainnet');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [appraisalResult, setAppraisalResult] = useState<NftAppraisal | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -51,6 +59,7 @@ const PawnForm: React.FC = () => {
                 contractAddress,
                 tokenId,
                 market: selectedMarket.name,
+                network: selectedNetwork,
             });
             setAppraisalResult(result);
             setNftDetailsForLoan({ name: `NFT #${tokenId}`, collection: `Collection ${contractAddress.substring(0,6)}...`});
@@ -62,7 +71,7 @@ const PawnForm: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [contractAddress, tokenId, selectedMarket]);
+    }, [contractAddress, tokenId, selectedMarket, selectedNetwork]);
 
     const handleAcceptOffer = () => {
         if (!appraisalResult) return;
@@ -111,6 +120,22 @@ const PawnForm: React.FC = () => {
                                             className={`p-4 bg-brand-dark rounded-lg border-2 transition-all duration-200 ${selectedMarket.name === market.name ? 'border-brand-gold shadow-gold-glow' : 'border-yellow-900/30 opacity-60 hover:opacity-100'}`}
                                         >
                                             {market.logo}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Chain</label>
+                                <div className="flex gap-3">
+                                    {NETWORK_OPTIONS.map(opt => (
+                                        <button
+                                            type="button"
+                                            key={opt.value}
+                                            onClick={() => setSelectedNetwork(opt.value)}
+                                            className={`flex-1 py-2 px-3 rounded-md border text-sm font-medium transition-all duration-200 ${selectedNetwork === opt.value ? 'border-brand-gold text-brand-gold bg-brand-gold/10' : 'border-yellow-900/30 text-gray-400 hover:border-yellow-900/60'}`}
+                                        >
+                                            {opt.label}
                                         </button>
                                     ))}
                                 </div>

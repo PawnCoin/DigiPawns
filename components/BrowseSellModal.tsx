@@ -10,6 +10,7 @@ import { getNftAppraisal } from '../services/geminiService';
 import { useAppContext } from '../contexts/AppContext';
 import { NFT_MARKETPLACES, NFT_CATEGORIES } from '../constants';
 import type { Nft, NftAppraisal } from '../types';
+import { type AlchemyNetwork, CHAIN_TO_ALCHEMY_NETWORK } from '../services/nftService';
 import { toast } from 'sonner';
 
 const SHOP_BUY_MULTIPLIER = 0.6;
@@ -29,6 +30,12 @@ const BrowseSellModal: React.FC<Props> = ({ nft, onClose }) => {
 
     const offerPrice = appraisal ? Math.round(appraisal.estimatedValueUSD * SHOP_BUY_MULTIPLIER) : 0;
 
+    // Derive the Alchemy network from the NFT id prefix (format: "<network>-<contractAddress>-<tokenId>").
+    const networkFromId: AlchemyNetwork | undefined = (() => {
+        const known = Object.values(CHAIN_TO_ALCHEMY_NETWORK) as AlchemyNetwork[];
+        return known.find(n => nft.id.startsWith(n + '-'));
+    })();
+
     const handleAppraise = async () => {
         if (!nft.contractAddress || !nft.tokenId) {
             setError('This NFT is missing contract address or token ID — appraisal not possible.');
@@ -41,6 +48,7 @@ const BrowseSellModal: React.FC<Props> = ({ nft, onClose }) => {
                 contractAddress: nft.contractAddress,
                 tokenId: nft.tokenId,
                 market: NFT_MARKETPLACES[0].name,
+                network: networkFromId,
             });
             setAppraisal(result);
         } catch (err) {
