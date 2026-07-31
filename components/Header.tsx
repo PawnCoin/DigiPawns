@@ -3,6 +3,7 @@ import { DigiPawnsFullLogo, WalletIcon, LogOutIcon } from './IconComponents';
 import { useAppContext } from '../contexts/AppContext';
 import useRouter from '../hooks/useRouter';
 import EnsName from './EnsName';
+import SnsName from './SnsName';
 import { toast } from 'sonner';
 
 /** Small inline copy-to-clipboard button used for raw address strings. */
@@ -118,7 +119,7 @@ const Header: React.FC = () => {
                 className="hidden sm:flex items-center gap-1.5 font-mono text-xs py-1.5 px-3 rounded-lg border border-purple-700/50 bg-purple-900/20 text-purple-300 cursor-default"
               >
                 <span className="w-2 h-2 rounded-full bg-purple-400" />
-                ◎ {formatAddress(solanaAddress)}
+                ◎ <SnsName address={solanaAddress} />
               </span>
             )}
 
@@ -198,8 +199,7 @@ const Header: React.FC = () => {
                         )}
                         {solanaAddress && (
                           <span className="flex items-center gap-1 text-purple-500/80 text-xs font-mono">
-                            ◎ {formatAddress(solanaAddress)}
-                            <CopyButton text={solanaAddress} />
+                            ◎ <SnsName address={solanaAddress} copyable />
                           </span>
                         )}
                       </div>

@@ -5,6 +5,7 @@ import { fetchNftsForWallet } from '../services/nftService';
 import { toast } from 'sonner';
 import { CheckCircleIcon } from './IconComponents';
 import EnsName from './EnsName';
+import SnsName from './SnsName';
 
 /** Small copy-to-clipboard icon button. */
 const CopyIconButton: React.FC<{ text: string; label?: string }> = ({ text, label = 'Copy address' }) => {
@@ -171,9 +172,11 @@ const ProfileView: React.FC = () => {
                         <div>
                             <label className="block text-sm font-medium text-gray-400">Solana Wallet</label>
                             {isSolanaConnected && solanaAddress ? (
-                                <div className="mt-1 flex items-center gap-1 bg-brand-dark border border-purple-900/40 rounded-md py-2 px-3">
-                                    <p className="font-mono text-sm text-purple-400 break-all select-all flex-1">{solanaAddress}</p>
-                                    <CopyIconButton text={solanaAddress} label="Copy Solana address" />
+                                <div className="mt-1 bg-brand-dark border border-purple-900/40 rounded-md py-2 px-3">
+                                    <div className="flex items-center gap-1">
+                                        <SnsName address={solanaAddress} className="font-mono text-sm text-purple-400 break-all select-all flex-1" prefixLen={10} suffixLen={6} copyable />
+                                    </div>
+                                    <p className="font-mono text-xs text-gray-600 break-all select-all mt-0.5">{solanaAddress}</p>
                                 </div>
                             ) : (
                                 <div className="mt-1 flex items-center gap-3 bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3">
