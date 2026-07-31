@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useConnect } from 'wagmi';
 import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletReadyState } from '@solana/wallet-adapter-base';
 import { useAppContext } from '../contexts/AppContext';
 import { SOLANA_WALLET_OPTIONS } from '../lib/web3';
 
@@ -62,11 +63,21 @@ const WalletPickerModal: React.FC<WalletPickerModalProps> = ({ onClose }) => {
     const [tab, setTab] = useState<WalletTab>('evm');
     const [wcError, setWcError] = useState(false);
 
+    // Detect whether any EIP-1193 provider is injected in the browser.
+    // `window.ethereum` is set by MetaMask, Rabby, Brave Wallet, OKX, etc.
+    const hasInjectedProvider =
+        typeof window !== 'undefined' && !!(window as unknown as { ethereum?: unknown }).ethereum;
+
     const evmIcon = (connectorId: string): string | undefined =>
         connectors.find(c => c.id === connectorId)?.icon;
 
     const solanaIcon = (walletName: string): string | undefined =>
         solanaWallets.find(w => w.adapter.name === walletName)?.adapter.icon;
+
+    // Check whether a Solana wallet extension is detected in the browser.
+    const solanaReadyState = (walletName: string): WalletReadyState =>
+        solanaWallets.find(w => w.adapter.name === walletName)?.readyState
+        ?? WalletReadyState.NotDetected;
 
     const handleEvmPick = async (connectorId: string) => {
         setWcError(false);
@@ -120,16 +131,21 @@ const WalletPickerModal: React.FC<WalletPickerModalProps> = ({ onClose }) => {
                     <div className="space-y-2">
                         {walletOptions.map(option => {
                             const isWC = option.id === 'walletConnect';
+                            const isInjected = option.id === 'injected';
+                            // Injected connector requires window.ethereum; CB & WC always work
+                            const notInstalled = isInjected && !hasInjectedProvider;
                             const fb = EVM_FALLBACKS[option.id] ?? { letter: option.label[0], bg: 'bg-gray-600' };
                             return (
                                 <div key={option.id}>
                                     <button
-                                        onClick={() => handleEvmPick(option.id)}
-                                        disabled={isConnectingWallet}
-                                        className={`w-full flex items-center gap-3 text-left border rounded-lg py-3 px-4 transition-colors disabled:opacity-50 ${
-                                            isWC && wcError
-                                                ? 'border-red-500/60 bg-red-950/20'
-                                                : 'border-yellow-900/30 hover:border-brand-gold/60 hover:bg-brand-gold/10'
+                                        onClick={() => !notInstalled && handleEvmPick(option.id)}
+                                        disabled={isConnectingWallet || notInstalled}
+                                        className={`w-full flex items-center gap-3 text-left border rounded-lg py-3 px-4 transition-colors ${
+                                            notInstalled
+                                                ? 'border-yellow-900/20 opacity-50 cursor-not-allowed'
+                                                : isWC && wcError
+                                                    ? 'border-red-500/60 bg-red-950/20'
+                                                    : 'border-yellow-900/30 hover:border-brand-gold/60 hover:bg-brand-gold/10 disabled:opacity-50'
                                         }`}
                                     >
                                         <WalletLogoImg
@@ -138,10 +154,30 @@ const WalletPickerModal: React.FC<WalletPickerModalProps> = ({ onClose }) => {
                                             fallbackBg={fb.bg}
                                             alt={option.label}
                                         />
-                                        <span>
+                                        <span className="flex-1 min-w-0">
                                             <span className="block text-sm font-semibold text-white">{option.label}</span>
-                                            <span className="block text-xs text-gray-500">{option.description}</span>
+                                            {notInstalled ? (
+                                                <span className="block text-xs text-yellow-600/80">
+                                                    Not installed —{' '}
+                                                    <a
+                                                        href="https://metamask.io/download/"
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        onClick={e => e.stopPropagation()}
+                                                        className="underline hover:text-yellow-400"
+                                                    >
+                                                        Get MetaMask
+                                                    </a>
+                                                </span>
+                                            ) : (
+                                                <span className="block text-xs text-gray-500">{option.description}</span>
+                                            )}
                                         </span>
+                                        {notInstalled && (
+                                            <span className="flex-shrink-0 text-[10px] font-semibold bg-yellow-900/30 text-yellow-600/80 rounded px-1.5 py-0.5">
+                                                Not installed
+                                            </span>
+                                        )}
                                     </button>
 
                                     {/* Allowlist error — shown only after a failed WC attempt */}
@@ -180,11 +216,19 @@ const WalletPickerModal: React.FC<WalletPickerModalProps> = ({ onClose }) => {
                         )}
                         {SOLANA_WALLET_OPTIONS.map(w => {
                             const fb = SOLANA_FALLBACKS[w.name] ?? { letter: w.name[0], bg: 'bg-gray-600' };
+                            const readyState = solanaReadyState(w.name);
+                            const notInstalled = readyState === WalletReadyState.NotDetected
+                                || readyState === WalletReadyState.Unsupported;
                             return (
                                 <button
                                     key={w.name}
-                                    onClick={() => handleSolanaPick(w.name)}
-                                    className="w-full flex items-center gap-3 text-left border border-yellow-900/30 hover:border-purple-500/60 hover:bg-purple-900/10 rounded-lg py-3 px-4 transition-colors"
+                                    onClick={() => !notInstalled && handleSolanaPick(w.name)}
+                                    disabled={notInstalled}
+                                    className={`w-full flex items-center gap-3 text-left border rounded-lg py-3 px-4 transition-colors ${
+                                        notInstalled
+                                            ? 'border-yellow-900/20 opacity-50 cursor-not-allowed'
+                                            : 'border-yellow-900/30 hover:border-purple-500/60 hover:bg-purple-900/10'
+                                    }`}
                                 >
                                     <WalletLogoImg
                                         src={solanaIcon(w.name)}
@@ -192,10 +236,15 @@ const WalletPickerModal: React.FC<WalletPickerModalProps> = ({ onClose }) => {
                                         fallbackBg={fb.bg}
                                         alt={w.name}
                                     />
-                                    <span>
+                                    <span className="flex-1 min-w-0">
                                         <span className="block text-sm font-semibold text-white">{w.name}</span>
                                         <span className="block text-xs text-gray-500">{w.description}</span>
                                     </span>
+                                    {notInstalled && (
+                                        <span className="flex-shrink-0 text-[10px] font-semibold bg-yellow-900/30 text-yellow-600/80 rounded px-1.5 py-0.5">
+                                            Not installed
+                                        </span>
+                                    )}
                                 </button>
                             );
                         })}
