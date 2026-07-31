@@ -5,7 +5,7 @@ import type { Collection, Loan, UserProfile, ShopItem, Nft } from '../types';
 import { toast } from 'sonner';
 import { useEscrowAdmin } from '../hooks/useEscrow';
 import { ESCROW_ADDRESS } from '../services/escrowService';
-import { uploadImage, sanitiseFilename, deleteImage, isStorageUrl } from '../services/storageService';
+import { uploadImage, sanitiseFilename, deleteImage, isStorageUrl, resizeImageFile } from '../services/storageService';
 import { fetchNftsForWallet } from '../services/nftService';
 import { useAccount } from 'wagmi';
 
@@ -69,13 +69,14 @@ const AdminPage: React.FC = () => {
     const [pickerError, setPickerError] = useState<string | null>(null);
 
     const handleColImageUpload = async (file: File) => {
+        const resized = await resizeImageFile(file, 1200);
         const tempId = editingCollection || `new_${Date.now()}`;
-        const path = `collections/${tempId}/${sanitiseFilename(file.name)}`;
+        const path = `collections/${tempId}/${sanitiseFilename(resized.name)}`;
         setColUploadPct(0);
         try {
             // Upload overwrites the existing object at the same path automatically —
             // no explicit deletion needed (and deleting would remove the new file too).
-            const url = await uploadImage(file, path, setColUploadPct);
+            const url = await uploadImage(resized, path, setColUploadPct);
             setCollectionForm(f => ({ ...f, imageUrl: url }));
             toast.success('Image uploaded');
         } catch {
@@ -98,13 +99,14 @@ const AdminPage: React.FC = () => {
     };
 
     const handleShopImageUpload = async (file: File) => {
+        const resized = await resizeImageFile(file, 1200);
         const tempId = editingShopItem || `new_${Date.now()}`;
-        const path = `shopItems/${tempId}/${sanitiseFilename(file.name)}`;
+        const path = `shopItems/${tempId}/${sanitiseFilename(resized.name)}`;
         setShopUploadPct(0);
         try {
             // Upload overwrites the existing object at the same path automatically —
             // no explicit deletion needed (and deleting would remove the new file too).
-            const url = await uploadImage(file, path, setShopUploadPct);
+            const url = await uploadImage(resized, path, setShopUploadPct);
             setShopItemForm(f => ({ ...f, imageUrl: url }));
             toast.success('Image uploaded');
         } catch {

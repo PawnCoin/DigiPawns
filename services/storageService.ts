@@ -45,6 +45,46 @@ export function sanitiseFilename(original: string): string {
 }
 
 /**
+ * Resizes an image File to fit within maxPx × maxPx (maintaining aspect ratio).
+ * Returns the resized file as a new File (JPEG, quality 0.85).
+ * Falls back to the original file if the browser lacks canvas support.
+ */
+export async function resizeImageFile(file: File, maxPx = 1200): Promise<File> {
+    return new Promise(resolve => {
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(file);
+        img.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const { width, height } = img;
+            if (width <= maxPx && height <= maxPx) {
+                // Already small enough — no resize needed
+                resolve(file);
+                return;
+            }
+            const scale = Math.min(maxPx / width, maxPx / height);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(width * scale);
+            canvas.height = Math.round(height * scale);
+            const ctx = canvas.getContext('2d');
+            if (!ctx) { resolve(file); return; }
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(
+                blob => {
+                    if (!blob) { resolve(file); return; }
+                    // Keep a .jpg extension to signal the output format
+                    const baseName = file.name.replace(/\.[^.]+$/, '');
+                    resolve(new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' }));
+                },
+                'image/jpeg',
+                0.85,
+            );
+        };
+        img.onerror = () => { URL.revokeObjectURL(objectUrl); resolve(file); };
+        img.src = objectUrl;
+    });
+}
+
+/**
  * Returns true if the URL points to an object in this project's Firebase Storage bucket.
  */
 export function isStorageUrl(url: string): boolean {
