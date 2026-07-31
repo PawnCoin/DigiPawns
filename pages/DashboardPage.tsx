@@ -17,7 +17,11 @@ const DashboardPage: React.FC = () => {
     const { profile, isAdmin, navigate, messages, userId, isWalletConnected, openWalletPicker } = useAppContext();
     const [activeTab, setActiveTab] = useState<Tab>('loans');
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
-    const [walletNudgeDismissed, setWalletNudgeDismissed] = useState(false);
+    const nudgeKey = userId ? `walletNudgeDismissed_${userId}` : null;
+    const [walletNudgeDismissed, setWalletNudgeDismissed] = useState<boolean>(() => {
+        if (!nudgeKey) return false;
+        return localStorage.getItem(nudgeKey) === 'true';
+    });
 
     const unreadCount = messages.filter(m => m.toUid === userId && !m.read).length;
 
@@ -84,7 +88,7 @@ const DashboardPage: React.FC = () => {
                                 Connect Wallet
                             </button>
                             <button
-                                onClick={() => setWalletNudgeDismissed(true)}
+                                onClick={() => { if (nudgeKey) localStorage.setItem(nudgeKey, 'true'); setWalletNudgeDismissed(true); }}
                                 className="text-gray-500 hover:text-gray-300 transition-colors text-lg leading-none"
                                 aria-label="Dismiss"
                             >
