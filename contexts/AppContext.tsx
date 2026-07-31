@@ -108,9 +108,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [selectedSolanaWallet?.adapter.name]);
 
     // Persist EVM address to the user's Firestore profile whenever it changes.
+    // Clear walletAddress when the EVM wallet is disconnected (chainAddress becomes undefined).
     useEffect(() => {
-        if (userId && chainAddress) {
+        if (!userId) return;
+        if (chainAddress) {
             setDoc(doc(db, 'users', userId), { walletAddress: chainAddress }, { merge: true }).catch(console.error);
+        } else {
+            setDoc(doc(db, 'users', userId), { walletAddress: null }, { merge: true }).catch(console.error);
         }
     }, [userId, chainAddress]);
 
