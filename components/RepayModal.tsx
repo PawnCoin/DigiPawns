@@ -86,7 +86,7 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
     // Set when on-chain payment confirmed but Firestore write failed — shown in recovery screen.
     const [txHashForRecovery, setTxHashForRecovery] = useState<string | undefined>();
 
-    const { isSolanaConnected, isWalletConnected } = useAppContext();
+    const { isSolanaConnected, isWalletConnected, isCorrectChain, switchToCorrectChain } = useAppContext();
     const { balances }             = useTokenBalances();
     const { prices }               = usePrices();
     const { writeContractAsync }   = useWriteContract();
@@ -294,9 +294,24 @@ const RepayModal: React.FC<RepayModalProps> = ({ isOpen, onClose, loan, onSucces
         // ── 'initial' step ───────────────────────────────────────────────────
         const currentPrice = tokenPrice(selectedKey);
         const tokenAmount  = currentPrice ? discountedAmount / currentPrice : null;
+        const evmOptionSelected = selectedOption.chain === 'evm';
 
         return (
             <>
+                {/* Wrong-network warning */}
+                {isWalletConnected && !isCorrectChain && evmOptionSelected && (
+                    <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3">
+                        <p className="text-xs text-red-300 font-medium">
+                            ⚠ Wrong network — switch to a supported chain to pay with an EVM token.
+                        </p>
+                        <button
+                            onClick={switchToCorrectChain}
+                            className="flex-shrink-0 text-xs font-bold text-red-200 border border-red-700/60 rounded-lg px-2.5 py-1 hover:bg-red-900/40 transition-colors"
+                        >
+                            Switch
+                        </button>
+                    </div>
+                )}
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-gold/20 mb-3">
                     <ArrowUpCircleIcon className="h-7 w-7 text-brand-gold" />
                 </div>

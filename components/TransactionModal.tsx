@@ -3,6 +3,8 @@ import type { NftAppraisal, Loan, LoanTerms } from '../types';
 import { WalletIcon, CheckCircleIcon, ErrorIcon } from './IconComponents';
 import { useEscrowDeposit, type DepositStep } from '../hooks/useEscrow';
 import { ESCROW_ADDRESS } from '../services/escrowService';
+import { useChainId, useAccount, useSwitchChain } from 'wagmi';
+import { baseSepolia } from 'wagmi/chains';
 
 interface TransactionModalProps {
     isOpen: boolean;
@@ -35,6 +37,15 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     const [step, setStep] = useState<TransactionStep>('initial');
     const [errorMessage, setErrorMessage] = useState('');
     const { approveAndDeposit, escrowReady } = useEscrowDeposit();
+    const chainId = useChainId();
+    const { isConnected: isEvmConnected } = useAccount();
+    const { switchChainAsync } = useSwitchChain();
+    const isOnBaseSepolia = chainId === baseSepolia.id;
+    const showNetworkWarning = isEvmConnected && !isOnBaseSepolia;
+    const switchToBaseSepolia = async () => {
+        try { await switchChainAsync({ chainId: baseSepolia.id }); }
+        catch { /* user cancelled or wallet rejected */ }
+    };
 
     // Whether we have enough data for a real on-chain flow
     const useOnChain = escrowReady && !!contractAddress && !!tokenId && !!numericLoanId;
@@ -94,6 +105,20 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
             case 'initial':
                 return (
                     <>
+                        {/* Wrong-network warning (only relevant for on-chain escrow flow) */}
+                        {showNetworkWarning && (
+                            <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3">
+                                <p className="text-xs text-red-300 font-medium">
+                                    ⚠ Switch to Base Sepolia to deposit your NFT into escrow.
+                                </p>
+                                <button
+                                    onClick={switchToBaseSepolia}
+                                    className="flex-shrink-0 text-xs font-bold text-red-200 border border-red-700/60 rounded-lg px-2.5 py-1 hover:bg-red-900/40 transition-colors"
+                                >
+                                    Switch
+                                </button>
+                            </div>
+                        )}
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-brand-gold/20">
                             <WalletIcon className="h-8 w-8 text-brand-gold" />
                         </div>

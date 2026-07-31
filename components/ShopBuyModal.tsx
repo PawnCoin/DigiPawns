@@ -83,7 +83,7 @@ const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
     // User must note the tx hash to contact support.
     const [txHashForRecovery, setTxHashForRecovery] = useState<string | undefined>();
 
-    const { isSolanaConnected, isWalletConnected, buyShopItem, profile } = useAppContext();
+    const { isSolanaConnected, isWalletConnected, isCorrectChain, switchToCorrectChain, buyShopItem, profile } = useAppContext();
     const { balances }            = useTokenBalances();
     const { prices }              = usePrices();
     const { writeContractAsync }  = useWriteContract();
@@ -307,9 +307,24 @@ const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
         // ── initial ──────────────────────────────────────────────────────────
         const currentPrice = tokenPrice(selectedKey);
         const tokenAmt     = currentPrice ? discountedPrice / currentPrice : null;
+        const evmOptionSelected = selectedOption.chain === 'evm';
 
         return (
             <>
+                {/* Wrong-network warning */}
+                {isWalletConnected && !isCorrectChain && evmOptionSelected && (
+                    <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3">
+                        <p className="text-xs text-red-300 font-medium">
+                            ⚠ Wrong network — switch to a supported chain to pay with an EVM token.
+                        </p>
+                        <button
+                            onClick={switchToCorrectChain}
+                            className="flex-shrink-0 text-xs font-bold text-red-200 border border-red-700/60 rounded-lg px-2.5 py-1 hover:bg-red-900/40 transition-colors"
+                        >
+                            Switch
+                        </button>
+                    </div>
+                )}
                 {/* Item header */}
                 <div className="flex gap-4 items-center mb-4">
                     <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-brand-dark/60 border border-yellow-900/20">
