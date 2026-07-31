@@ -120,9 +120,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }, [userId, chainAddress]);
 
     // Persist Solana address to Firestore when it changes.
+    // Clear solanaAddress when the Solana wallet is disconnected (solanaAddress becomes null).
     useEffect(() => {
-        if (userId && solanaAddress) {
+        if (!userId) return;
+        if (solanaAddress) {
             setDoc(doc(db, 'users', userId), { solanaAddress }, { merge: true }).catch(console.error);
+        } else {
+            setDoc(doc(db, 'users', userId), { solanaAddress: null }, { merge: true }).catch(console.error);
         }
     }, [userId, solanaAddress]);
 
