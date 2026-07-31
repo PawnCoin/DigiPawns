@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { useEscrowAdmin } from '../hooks/useEscrow';
 import { ESCROW_ADDRESS } from '../services/escrowService';
 import { uploadImage, sanitiseFilename, deleteImage, isStorageUrl, resizeImageFile } from '../services/storageService';
-import { fetchNftsForWallet } from '../services/nftService';
+import { fetchNftsForWallet, fetchSolanaNftsFromWallet, isSolanaAddress } from '../services/nftService';
 import { useAccount } from 'wagmi';
 
 type AdminTab = 'users' | 'loans' | 'collections' | 'shop';
@@ -26,6 +26,7 @@ const ALCHEMY_CHAIN_LABEL: Record<string, string> = {
     'eth-mainnet':     'Ethereum',
     'polygon-mainnet': 'Polygon',
     'base-sepolia':    'Base Sepolia',
+    'solana-mainnet':  'Solana',
 };
 
 const emptyCollection = (): Omit<Collection, 'id' | 'createdAt'> => ({
@@ -188,8 +189,20 @@ const AdminPage: React.FC = () => {
         setPickerError(null);
         setPickerNfts([]);
         try {
-            const nfts = await fetchNftsForWallet(addr);
-            if (nfts.length === 0) setPickerError('No NFTs found for this address on Ethereum, Polygon, or Base Sepolia.');
+            let nfts: Nft[];
+            if (isSolanaAddress(addr)) {
+                // Solana base58 address — use the Solana-specific endpoint.
+                nfts = await fetchSolanaNftsFromWallet(addr);
+                if (nfts.length === 0) setPickerError('No NFTs found for this Solana address on mainnet.');
+            } else if (addr.startsWith('0x')) {
+                // EVM hex address — scan all three supported EVM networks.
+                nfts = await fetchNftsForWallet(addr);
+                if (nfts.length === 0) setPickerError('No NFTs found for this address on Ethereum, Polygon, or Base Sepolia.');
+            } else {
+                setPickerError('Unrecognised address format. Enter an EVM address (0x…) or a Solana address (base58).');
+                setPickerLoading(false);
+                return;
+            }
             setPickerNfts(nfts);
         } catch (err: any) {
             setPickerError(err?.message ?? 'Failed to fetch NFTs. Check the address and try again.');

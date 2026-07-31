@@ -170,6 +170,74 @@ async function fetchNftsFromNetwork(
     });
 }
 
+// ── Solana NFT fetch ───────────────────────────────────────────────────────
+
+/**
+ * Returns true when the address looks like a Solana base58 public key
+ * (no 0x prefix, 32-44 characters of base58 alphabet).
+ */
+export function isSolanaAddress(address: string): boolean {
+    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(address.trim());
+}
+
+/**
+ * Fetch NFTs owned by a Solana wallet address via Alchemy's Solana mainnet
+ * NFT endpoint. Returns the same Nft shape as the EVM fetch so both can be
+ * displayed in the same picker grid.
+ */
+export async function fetchSolanaNftsFromWallet(walletAddress: string): Promise<Nft[]> {
+    const apiKey = process.env.ALCHEMY_API_KEY;
+    if (!apiKey) {
+        throw new Error('NFT indexing isn\'t configured yet (missing Alchemy API key).');
+    }
+
+    const network = 'solana-mainnet';
+    const url = new URL(`https://${network}.g.alchemy.com/nft/v3/${apiKey}/getNFTsForOwner`);
+    url.searchParams.set('owner', walletAddress.trim());
+    url.searchParams.set('withMetadata', 'true');
+    url.searchParams.set('pageSize', '100');
+
+    let response: Response;
+    try {
+        response = await fetch(url.toString());
+    } catch {
+        throw new Error('Could not reach the NFT indexing service. Check your connection and try again.');
+    }
+
+    if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        console.error('Alchemy Solana NFT API error:', response.status, body);
+        throw new Error(`Failed to fetch Solana NFT portfolio (status ${response.status}).`);
+    }
+
+    const data: AlchemyGetNftsForOwnerResponse = await response.json();
+
+    return (data.ownedNfts ?? []).map((nft): Nft => {
+        // On Solana each NFT is its own mint; Alchemy surfaces the mint address
+        // as contract.address and tokenId is typically "1".
+        const contractAddress = nft.contract?.address ?? '';
+        const tokenId = nft.tokenId ?? '1';
+        const collection = nft.contract?.name || nft.contract?.symbol || 'Unnamed Collection';
+        const name = nft.name || `${collection} #${tokenId}`;
+        const imageUrl =
+            nft.image?.cachedUrl ||
+            nft.image?.thumbnailUrl ||
+            nft.image?.originalUrl ||
+            FALLBACK_IMAGE;
+
+        return {
+            // Use "solana-mainnet" prefix so AdminPage can derive the chain label.
+            id: `${network}-${contractAddress}-${tokenId}`,
+            name,
+            collection,
+            imageUrl,
+            estimatedValue: 0,
+            contractAddress,
+            tokenId,
+        };
+    });
+}
+
 /**
  * Fetch NFTs for a wallet address across all specified Alchemy networks.
  * Defaults to all three supported EVM networks (Ethereum, Polygon, Base Sepolia).
