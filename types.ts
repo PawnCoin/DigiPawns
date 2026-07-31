@@ -72,6 +72,11 @@ export interface ShopItem {
     sellerUsername?: string;
     originalLoanId?: string;
     listedAt: string;
+    /** On-chain contract address — stored when the item was imported from a wallet or
+     *  swept from escrow, so future escrow flows can reference it without re-fetching. */
+    contractAddress?: string;
+    /** On-chain token ID — stored alongside contractAddress for the same reason. */
+    tokenId?: string;
     /** Admin must explicitly approve before the item is visible in the public shop.
      *  Defaults to true for admin-added items, false for user-sold/liquidated/traded-in. */
     approved?: boolean;

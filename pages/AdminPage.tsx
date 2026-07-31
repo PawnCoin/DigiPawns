@@ -1,11 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { Collection, Loan, UserProfile, ShopItem } from '../types';
+import type { Collection, Loan, UserProfile, ShopItem, Nft } from '../types';
 import { toast } from 'sonner';
 import { useEscrowAdmin } from '../hooks/useEscrow';
 import { ESCROW_ADDRESS } from '../services/escrowService';
 import { uploadImage, sanitiseFilename, deleteImage, isStorageUrl } from '../services/storageService';
+import { fetchNftsForWallet } from '../services/nftService';
+import { useAccount } from 'wagmi';
 
 type AdminTab = 'users' | 'loans' | 'collections' | 'shop';
 
@@ -18,7 +20,13 @@ const isSuspectImageUrl = (url: string) =>
 
 const LOAN_STATUSES = ['Active', 'Repaid', 'Defaulted', 'Liquidated'];
 const TRANSFER_STATUSES = ['awaiting_transfer', 'received', 'active', 'returned', 'liquidated'];
-const NFT_CHAINS = ['Ethereum', 'Solana', 'Polygon', 'BNB Chain', 'Avalanche'];
+const NFT_CHAINS = ['Ethereum', 'Base Sepolia', 'Polygon', 'Solana', 'BNB Chain', 'Avalanche'];
+
+const ALCHEMY_CHAIN_LABEL: Record<string, string> = {
+    'eth-mainnet':     'Ethereum',
+    'polygon-mainnet': 'Polygon',
+    'base-sepolia':    'Base Sepolia',
+};
 
 const emptyCollection = (): Omit<Collection, 'id' | 'createdAt'> => ({
     name: '', description: '', imageUrl: '', chain: 'Ethereum',
@@ -27,6 +35,7 @@ const emptyCollection = (): Omit<Collection, 'id' | 'createdAt'> => ({
 
 const emptyShopItem = (): Omit<ShopItem, 'id' | 'listedAt' | 'source'> => ({
     name: '', collection: '', imageUrl: '', category: 'Art', chain: 'Ethereum', price: 0,
+    contractAddress: '', tokenId: '',
 });
 
 const AdminPage: React.FC = () => {
@@ -34,6 +43,7 @@ const AdminPage: React.FC = () => {
         adminUpdateUser, adminDeleteUser, adminUpdateLoan, adminDeleteLoan,
         adminAddCollection, adminUpdateCollection, adminDeleteCollection,
         adminAddShopItem, adminUpdateShopItem, adminDeleteShopItem } = useAppContext();
+    const { address: evmAddress } = useAccount();
 
     const [tab, setTab] = useState<AdminTab>('users');
     const [collectionForm, setCollectionForm] = useState(emptyCollection());
@@ -49,6 +59,13 @@ const AdminPage: React.FC = () => {
     const colFileRef = useRef<HTMLInputElement>(null);
     const shopFileRef = useRef<HTMLInputElement>(null);
     const { releaseToOwner, sweepToShop, escrowReady } = useEscrowAdmin();
+
+    // Wallet NFT browser state
+    const [walletPickerOpen, setWalletPickerOpen] = useState(false);
+    const [walletInput, setWalletInput] = useState('');
+    const [pickerNfts, setPickerNfts] = useState<Nft[]>([]);
+    const [pickerLoading, setPickerLoading] = useState(false);
+    const [pickerError, setPickerError] = useState<string | null>(null);
 
     const handleColImageUpload = async (file: File) => {
         const tempId = editingCollection || `new_${Date.now()}`;
@@ -150,8 +167,46 @@ const AdminPage: React.FC = () => {
             setShopItemForm(emptyShopItem());
             setEditingShopItem(null);
             setShowShopItemForm(false);
+            setWalletPickerOpen(false);
+            setPickerNfts([]);
         } catch { toast.error('Failed to save item'); }
     };
+
+    const handleFetchWalletNfts = useCallback(async () => {
+        const addr = walletInput.trim();
+        if (!addr) { toast.error('Enter a wallet address first'); return; }
+        setPickerLoading(true);
+        setPickerError(null);
+        setPickerNfts([]);
+        try {
+            const nfts = await fetchNftsForWallet(addr);
+            if (nfts.length === 0) setPickerError('No NFTs found for this address on Ethereum, Polygon, or Base Sepolia.');
+            setPickerNfts(nfts);
+        } catch (err: any) {
+            setPickerError(err?.message ?? 'Failed to fetch NFTs. Check the address and try again.');
+        } finally {
+            setPickerLoading(false);
+        }
+    }, [walletInput]);
+
+    const handlePickNft = useCallback((nft: Nft) => {
+        // Derive a human-readable chain label from the nft id prefix.
+        const chainLabel = Object.entries(ALCHEMY_CHAIN_LABEL).find(([prefix]) =>
+            String(nft.id).startsWith(prefix)
+        )?.[1] ?? 'Ethereum';
+
+        setShopItemForm(f => ({
+            ...f,
+            name: nft.name,
+            collection: nft.collection,
+            imageUrl: nft.imageUrl,
+            chain: chainLabel,
+            contractAddress: nft.contractAddress,
+            tokenId: nft.tokenId,
+        }));
+        setWalletPickerOpen(false);
+        toast.success(`"${nft.name}" pre-filled — set a price and save.`);
+    }, []);
 
     const handleDeleteConfirm = async () => {
         if (!confirmDelete) return;
@@ -481,6 +536,85 @@ const AdminPage: React.FC = () => {
                                 {showShopItemForm && (
                                     <div className="mb-6 p-6 rounded-xl border border-brand-gold/30 bg-brand-navy/60">
                                         <h3 className="font-bold text-white mb-4">{editingShopItem ? 'Edit Item' : 'New Shop Item'}</h3>
+
+                                        {/* ── Wallet NFT Browser ── */}
+                                        <div className="mb-5 rounded-lg border border-yellow-900/40 bg-brand-dark/50 overflow-hidden">
+                                            <button
+                                                type="button"
+                                                onClick={() => setWalletPickerOpen(o => !o)}
+                                                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-brand-gold hover:bg-brand-gold/5 transition-colors"
+                                            >
+                                                <span>🔍 Browse Wallet NFTs</span>
+                                                <span className="text-gray-500 text-xs">{walletPickerOpen ? '▲ collapse' : '▼ expand'}</span>
+                                            </button>
+
+                                            {walletPickerOpen && (
+                                                <div className="px-4 pb-4 border-t border-yellow-900/30">
+                                                    <p className="text-xs text-gray-500 mt-3 mb-2">
+                                                        Fetch NFTs from any EVM wallet. Click one to pre-fill the form below.
+                                                    </p>
+                                                    <div className="flex gap-2 flex-wrap">
+                                                        <input
+                                                            type="text"
+                                                            placeholder="0x… wallet address"
+                                                            value={walletInput}
+                                                            onChange={e => setWalletInput(e.target.value)}
+                                                            onKeyDown={e => e.key === 'Enter' && handleFetchWalletNfts()}
+                                                            className="flex-1 min-w-0 bg-brand-navy border border-yellow-900/40 rounded px-3 py-2 text-white text-sm focus:outline-none focus:ring-1 focus:ring-brand-gold/40"
+                                                        />
+                                                        {evmAddress && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setWalletInput(evmAddress)}
+                                                                className="px-3 py-2 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 transition-colors whitespace-nowrap"
+                                                            >
+                                                                Use Connected Wallet
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleFetchWalletNfts}
+                                                            disabled={pickerLoading}
+                                                            className="px-4 py-2 rounded btn-metallic-gold text-sm font-bold disabled:opacity-50"
+                                                        >
+                                                            {pickerLoading ? 'Loading…' : 'Fetch NFTs'}
+                                                        </button>
+                                                    </div>
+
+                                                    {pickerError && (
+                                                        <p className="mt-3 text-xs text-yellow-400">{pickerError}</p>
+                                                    )}
+
+                                                    {pickerNfts.length > 0 && (
+                                                        <div className="mt-3">
+                                                            <p className="text-xs text-gray-500 mb-2">{pickerNfts.length} NFT{pickerNfts.length !== 1 ? 's' : ''} found — click one to pre-fill</p>
+                                                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-60 overflow-y-auto pr-1">
+                                                                {pickerNfts.map(nft => (
+                                                                    <button
+                                                                        key={String(nft.id)}
+                                                                        type="button"
+                                                                        onClick={() => handlePickNft(nft)}
+                                                                        title={`${nft.name}\n${nft.collection}`}
+                                                                        className="group relative rounded-lg overflow-hidden border border-yellow-900/30 hover:border-brand-gold/60 transition-colors bg-brand-dark aspect-square"
+                                                                    >
+                                                                        <img
+                                                                            src={nft.imageUrl}
+                                                                            alt={nft.name}
+                                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                                            onError={e => { (e.currentTarget as HTMLImageElement).src = 'https://placehold.co/80x80/1a1a2e/d4af37?text=NFT'; }}
+                                                                        />
+                                                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                                                                            <p className="text-white text-[9px] font-semibold leading-tight line-clamp-2">{nft.name}</p>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {([['name', 'Item Name', 'text'], ['collection', 'Collection', 'text'], ['category', 'Category', 'text'], ['price', 'Price (USD)', 'number']] as [keyof typeof shopItemForm, string, string][]).map(([field, label, type]) => (
                                                 <div key={field}>
