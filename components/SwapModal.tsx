@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 import { usePrices } from '../hooks/usePrices';
 import { useTokenBalances } from '../hooks/useTokenBalances';
+import { useSwapQuote } from '../hooks/useSwapQuote';
 
 // ── Token config ─────────────────────────────────────────────────────────────
 const DIG_ADDRESS    = '0xf65A4a13D3DE514E1241ba515F0DE2B53eA8394B';
@@ -171,7 +172,16 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
     const price    = prices[meta.priceKey];
     const balance  = balances[meta.balKey];
     const spendNum = parseFloat(spendUsd) || 0;
-    const estOut   = price && spendNum > 0 ? spendNum / price : null;
+
+    // Live DEX quote (debounced 400 ms)
+    const { quote, isLoading: quoteLoading, error: quoteError } = useSwapQuote(
+        selected,
+        spendNum,
+        { eth: prices.eth, sol: prices.sol, dig: prices.dig, pc: prices.pc },
+    );
+
+    // Fallback spot-price estimate (used while quote is loading or unavailable)
+    const spotEstOut = price && spendNum > 0 ? spendNum / price : null;
 
     const openPopup = useCallback((url: string, name: string) => {
         const popup = window.open(url, name, 'width=480,height=700,resizable=yes,scrollbars=yes,noreferrer');
@@ -277,15 +287,86 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
                                 className="flex-1 bg-transparent border-none outline-none text-white font-bold text-xl tabular-nums"
                                 placeholder="100"
                             />
+                            {/* Spinner shown while quote is fetching */}
+                            {quoteLoading && (
+                                <div className="w-4 h-4 border-2 border-brand-gold/30 border-t-brand-gold rounded-full animate-spin shrink-0" />
+                            )}
                         </div>
-                        {estOut !== null && (
-                            <div className="mt-2 pt-2 border-t border-yellow-900/20 text-sm">
-                                <span className="text-gray-500">You get approx.&nbsp;</span>
-                                <span className="text-brand-gold font-black">~{fmtTok(estOut)} {meta.label}</span>
-                                <span className="text-gray-600 text-xs ml-1">(at current price)</span>
+
+                        {/* Live DEX quote */}
+                        {quote && !quoteLoading && (
+                            <div className="mt-3 pt-3 border-t border-yellow-900/20 flex flex-col gap-1.5">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-500">You get approx.</span>
+                                    <span className="text-brand-gold font-black">
+                                        ~{fmtTok(quote.outputAmount)} {meta.label}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-600">Minimum received&nbsp;
+                                        <span className="text-gray-700">(0.5% slippage)</span>
+                                    </span>
+                                    <span className="text-gray-400 font-semibold">
+                                        {fmtTok(quote.minimumReceived)} {meta.label}
+                                    </span>
+                                </div>
+                                {quote.priceImpact !== null && (
+                                    <div className="flex items-center justify-between text-xs">
+                                        <span className="text-gray-600">Price impact</span>
+                                        <span className={
+                                            quote.priceImpact > 5  ? 'text-red-400 font-bold' :
+                                            quote.priceImpact > 2  ? 'text-amber-400 font-semibold' :
+                                            'text-green-400 font-semibold'
+                                        }>
+                                            {quote.priceImpact > 0 ? '−' : ''}{Math.abs(quote.priceImpact).toFixed(2)}%
+                                        </span>
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-gray-700 mt-0.5">
+                                    Live quote from {quote.source === 'uniswap' ? 'Uniswap v3' : 'Jupiter'}
+                                </p>
                             </div>
                         )}
-                        {!price && (
+
+                        {/* Fallback spot estimate while quote loads for the first time */}
+                        {!quote && !quoteLoading && !quoteError && spotEstOut !== null && (
+                            <div className="mt-2 pt-2 border-t border-yellow-900/20 text-sm">
+                                <span className="text-gray-500">You get approx.&nbsp;</span>
+                                <span className="text-brand-gold font-black">~{fmtTok(spotEstOut)} {meta.label}</span>
+                                <span className="text-gray-600 text-xs ml-1">(spot price estimate)</span>
+                            </div>
+                        )}
+
+                        {/* Loading placeholder rows */}
+                        {quoteLoading && spendNum > 0 && (
+                            <div className="mt-3 pt-3 border-t border-yellow-900/20 flex flex-col gap-2">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-gray-600">Fetching live quote…</span>
+                                    <span className="text-gray-700 text-xs">
+                                        {spotEstOut !== null ? `~${fmtTok(spotEstOut)} ${meta.label}` : '—'}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Quote error — graceful fallback */}
+                        {quoteError && !quoteLoading && (
+                            <div className="mt-2 pt-2 border-t border-yellow-900/20">
+                                {spotEstOut !== null && (
+                                    <div className="text-sm mb-1.5">
+                                        <span className="text-gray-500">Approx.&nbsp;</span>
+                                        <span className="text-brand-gold font-black">~{fmtTok(spotEstOut)} {meta.label}</span>
+                                        <span className="text-gray-600 text-xs ml-1">(spot price)</span>
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-amber-600/80 flex items-center gap-1">
+                                    <span>⚠</span>
+                                    Live quote unavailable — showing spot price estimate.
+                                </p>
+                            </div>
+                        )}
+
+                        {!price && !quoteLoading && !quoteError && (
                             <p className="text-xs text-gray-600 mt-2">Price unavailable — quote will show once prices load.</p>
                         )}
                     </div>
