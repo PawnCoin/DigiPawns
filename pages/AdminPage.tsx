@@ -56,6 +56,7 @@ const AdminPage: React.FC = () => {
     const [escrowLoadingId, setEscrowLoadingId] = useState<string | null>(null);
     const [colUploadPct, setColUploadPct] = useState<number | null>(null);
     const [shopUploadPct, setShopUploadPct] = useState<number | null>(null);
+    const [confirmImageClear, setConfirmImageClear] = useState<'collection' | 'shop' | null>(null);
     const colFileRef = useRef<HTMLInputElement>(null);
     const shopFileRef = useRef<HTMLInputElement>(null);
     const { releaseToOwner, sweepToShop, escrowReady } = useEscrowAdmin();
@@ -85,7 +86,10 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    const handleColImageClear = async () => {
+    const handleColImageClear = () => setConfirmImageClear('collection');
+
+    const doColImageClear = async () => {
+        setConfirmImageClear(null);
         const url = collectionForm.imageUrl;
         setCollectionForm(f => ({ ...f, imageUrl: '' }));
         if (url && isStorageUrl(url)) {
@@ -111,7 +115,10 @@ const AdminPage: React.FC = () => {
         }
     };
 
-    const handleShopImageClear = async () => {
+    const handleShopImageClear = () => setConfirmImageClear('shop');
+
+    const doShopImageClear = async () => {
+        setConfirmImageClear(null);
         const url = shopItemForm.imageUrl;
         setShopItemForm(f => ({ ...f, imageUrl: '' }));
         if (url && isStorageUrl(url)) {
@@ -461,20 +468,34 @@ const AdminPage: React.FC = () => {
                                                         {/* File picker */}
                                                         <input ref={colFileRef} type="file" accept="image/*" className="hidden"
                                                             onChange={e => { const f = e.target.files?.[0]; if (f) handleColImageUpload(f); }} />
-                                                        <div className="flex gap-2 flex-wrap">
-                                                            <button type="button"
-                                                                disabled={colUploadPct !== null}
-                                                                onClick={() => colFileRef.current?.click()}
-                                                                className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
-                                                                {colUploadPct !== null ? `Uploading… ${colUploadPct}%` : '📁 Upload image'}
-                                                            </button>
-                                                            {collectionForm.imageUrl && (
-                                                                <button type="button" onClick={handleColImageClear}
-                                                                    className="px-3 py-1.5 rounded border border-red-900/40 text-red-400 text-xs font-semibold hover:bg-red-900/20 transition-colors">
-                                                                    ✕ Remove
+                                                        {confirmImageClear === 'collection' ? (
+                                                            <div className="flex items-center gap-2 flex-wrap py-1">
+                                                                <span className="text-xs text-red-400">Remove this image? This cannot be undone.</span>
+                                                                <button type="button" onClick={doColImageClear}
+                                                                    className="px-2.5 py-1 rounded border border-red-500/60 text-red-400 text-xs font-semibold hover:bg-red-900/30 transition-colors">
+                                                                    Confirm
                                                                 </button>
-                                                            )}
-                                                        </div>
+                                                                <button type="button" onClick={() => setConfirmImageClear(null)}
+                                                                    className="px-2.5 py-1 rounded border border-yellow-900/40 text-gray-400 text-xs font-semibold hover:text-white transition-colors">
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex gap-2 flex-wrap">
+                                                                <button type="button"
+                                                                    disabled={colUploadPct !== null}
+                                                                    onClick={() => colFileRef.current?.click()}
+                                                                    className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
+                                                                    {colUploadPct !== null ? `Uploading… ${colUploadPct}%` : '📁 Upload image'}
+                                                                </button>
+                                                                {collectionForm.imageUrl && (
+                                                                    <button type="button" onClick={handleColImageClear}
+                                                                        className="px-3 py-1.5 rounded border border-red-900/40 text-red-400 text-xs font-semibold hover:bg-red-900/20 transition-colors">
+                                                                        ✕ Remove
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                         {/* URL fallback */}
                                                         <input type="text" placeholder="or paste image URL"
                                                             value={collectionForm.imageUrl}
@@ -651,20 +672,34 @@ const AdminPage: React.FC = () => {
                                                         {/* File picker */}
                                                         <input ref={shopFileRef} type="file" accept="image/*" className="hidden"
                                                             onChange={e => { const f = e.target.files?.[0]; if (f) handleShopImageUpload(f); }} />
-                                                        <div className="flex gap-2 flex-wrap">
-                                                            <button type="button"
-                                                                disabled={shopUploadPct !== null}
-                                                                onClick={() => shopFileRef.current?.click()}
-                                                                className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
-                                                                {shopUploadPct !== null ? `Uploading… ${shopUploadPct}%` : '📁 Upload image'}
-                                                            </button>
-                                                            {shopItemForm.imageUrl && (
-                                                                <button type="button" onClick={handleShopImageClear}
-                                                                    className="px-3 py-1.5 rounded border border-red-900/40 text-red-400 text-xs font-semibold hover:bg-red-900/20 transition-colors">
-                                                                    ✕ Remove
+                                                        {confirmImageClear === 'shop' ? (
+                                                            <div className="flex items-center gap-2 flex-wrap py-1">
+                                                                <span className="text-xs text-red-400">Remove this image? This cannot be undone.</span>
+                                                                <button type="button" onClick={doShopImageClear}
+                                                                    className="px-2.5 py-1 rounded border border-red-500/60 text-red-400 text-xs font-semibold hover:bg-red-900/30 transition-colors">
+                                                                    Confirm
                                                                 </button>
-                                                            )}
-                                                        </div>
+                                                                <button type="button" onClick={() => setConfirmImageClear(null)}
+                                                                    className="px-2.5 py-1 rounded border border-yellow-900/40 text-gray-400 text-xs font-semibold hover:text-white transition-colors">
+                                                                    Cancel
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex gap-2 flex-wrap">
+                                                                <button type="button"
+                                                                    disabled={shopUploadPct !== null}
+                                                                    onClick={() => shopFileRef.current?.click()}
+                                                                    className="px-3 py-1.5 rounded border border-brand-gold/40 text-brand-gold text-xs font-semibold hover:bg-brand-gold/10 disabled:opacity-50 transition-colors">
+                                                                    {shopUploadPct !== null ? `Uploading… ${shopUploadPct}%` : '📁 Upload image'}
+                                                                </button>
+                                                                {shopItemForm.imageUrl && (
+                                                                    <button type="button" onClick={handleShopImageClear}
+                                                                        className="px-3 py-1.5 rounded border border-red-900/40 text-red-400 text-xs font-semibold hover:bg-red-900/20 transition-colors">
+                                                                        ✕ Remove
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                         {/* URL fallback */}
                                                         <input type="text" placeholder="or paste image URL"
                                                             value={shopItemForm.imageUrl}
