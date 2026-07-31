@@ -1,68 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import type { ShopItem } from '../types';
 import { CheckCircleIcon, ErrorIcon } from './IconComponents';
-import { useWriteContract, usePublicClient } from 'wagmi';
-import { mainnet } from 'wagmi/chains';
-import { parseUnits } from 'viem';
-import { useWallet as useSolanaWallet, useConnection } from '@solana/wallet-adapter-react';
-import { Transaction, PublicKey } from '@solana/web3.js';
-// NOTE: @solana/spl-token is dynamically imported inside executeSPL to avoid its Buffer
-// global reference running before the index.tsx polyfill (ES module loading order issue).
-import { useTokenBalances } from '../hooks/useTokenBalances';
-import { usePrices } from '../hooks/usePrices';
+import { Spinner, WrongNetworkBanner, PaymentOptionGrid } from './PaymentUI';
+import { usePaymentFlow, PAYMENT_OPTIONS, DIG_ADDRESS, PC_ETH_ADDRESS, fmt, fmtTok } from '../hooks/usePaymentFlow';
 import { useAppContext } from '../contexts/AppContext';
-
-// ── Token addresses ──────────────────────────────────────────────────────────
-const DIG_ADDRESS    = '0xf65A4a13D3DE514E1241ba515F0DE2B53eA8394B' as `0x${string}`;
-const PC_ETH_ADDRESS = '0x2Fe269292f74F0a98C5786088317B4f86313C211' as `0x${string}`;
-const PC_SOL_MINT    = 'EFzKRUaSvLSehersFS12eXS4Nts32Mn9CKhftghFSarE';
-
-// ── Platform wallets from env ────────────────────────────────────────────────
-const PLATFORM_EVM_WALLET  = (process.env.PLATFORM_WALLET  || '') as `0x${string}`;
-const PLATFORM_SOL_WALLET  = process.env.PLATFORM_SOL_WALLET || '';
-const EVM_PAYMENTS_ENABLED = PLATFORM_EVM_WALLET.startsWith('0x') && PLATFORM_EVM_WALLET.length === 42;
-const SOL_PAYMENTS_ENABLED = PLATFORM_SOL_WALLET.length > 10;
-
-// ── Minimal ERC-20 ABI ───────────────────────────────────────────────────────
-const ERC20_ABI = [
-    {
-        name: 'transfer',
-        type: 'function' as const,
-        stateMutability: 'nonpayable' as const,
-        inputs: [
-            { name: 'to',     type: 'address' as const },
-            { name: 'amount', type: 'uint256' as const },
-        ],
-        outputs: [{ name: '', type: 'bool' as const }],
-    },
-] as const;
-
-// ── Payment option definitions ───────────────────────────────────────────────
-type PayKey = 'credit' | 'DIG' | 'PC-ETH' | 'PC-SOL';
-interface PaymentOption {
-    key: PayKey;
-    label: string;
-    logo: string | null;
-    discount: number;
-    chain: 'evm' | 'sol' | 'credit';
-}
-const PAYMENT_OPTIONS: PaymentOption[] = [
-    { key: 'credit',  label: 'Store Credit', logo: null,            discount: 0,    chain: 'credit' },
-    { key: 'DIG',     label: '$DIG',         logo: '/dig-logo.png', discount: 0.25, chain: 'evm'    },
-    { key: 'PC-ETH',  label: '$PC (ETH)',    logo: '/pc-logo.png',  discount: 0.20, chain: 'evm'    },
-    { key: 'PC-SOL',  label: '$PC (SOL)',    logo: '/pc-logo.png',  discount: 0.20, chain: 'sol'    },
-];
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const fmt    = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtTok = (n: number) => n < 0.001 ? '<0.001' : n.toLocaleString(undefined, { maximumFractionDigits: 4 });
-
-const Spinner: React.FC = () => (
-    <svg className="animate-spin h-8 w-8 text-brand-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-    </svg>
-);
 
 // ── Props ────────────────────────────────────────────────────────────────────
 interface ShopBuyModalProps {
@@ -74,8 +15,7 @@ type ModalStep = 'initial' | 'processing' | 'success' | 'error' | 'payment-recor
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
-    const [step, setStep]             = useState<ModalStep>('initial');
-    const [selectedKey, setSelectedKey] = useState<PayKey>('credit');
+    const [step, setStep]                 = useState<ModalStep>('initial');
     const [errorMessage, setErrorMessage] = useState('');
     const [savedAmount, setSavedAmount]   = useState(0);
     const [savedToken, setSavedToken]     = useState('');
@@ -83,40 +23,15 @@ const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
     // User must note the tx hash to contact support.
     const [txHashForRecovery, setTxHashForRecovery] = useState<string | undefined>();
 
-    const { isSolanaConnected, isWalletConnected, isCorrectChain, switchToCorrectChain, buyShopItem, profile } = useAppContext();
-    const { balances }            = useTokenBalances();
-    const { prices }              = usePrices();
-    const { writeContractAsync }  = useWriteContract();
-    const publicClient            = usePublicClient({ chainId: mainnet.id });
-    const { sendTransaction, publicKey: solPublicKey } = useSolanaWallet();
-    const { connection }          = useConnection();
+    const { buyShopItem, profile } = useAppContext();
 
     const STARTING_BALANCE = 25000;
     const storeCredit = profile.balance ?? STARTING_BALANCE;
+    const standardPrice = item.price;
 
-    // Reset on mount
-    useEffect(() => {
-        setStep('initial');
-        setErrorMessage('');
-        setSelectedKey('credit');
-    }, [item.id]);
-
-    const selectedOption   = PAYMENT_OPTIONS.find(o => o.key === selectedKey)!;
-    const discount         = selectedOption.discount;
-    const standardPrice    = item.price;
-    const discountedPrice  = standardPrice * (1 - discount);
-    const savings          = standardPrice - discountedPrice;
-
-    // ── Token price for a given key ──────────────────────────────────────────
-    const tokenPrice = (key: PayKey): number | null => {
-        if (key === 'DIG')   return prices.dig ?? null;
-        if (key === 'PC-ETH' || key === 'PC-SOL') return prices.pc ?? null;
-        return null;
-    };
-
-    // ── Per-option status ────────────────────────────────────────────────────
-    const getOptionStatus = (opt: PaymentOption) => {
-        if (opt.key === 'credit') {
+    const flow = usePaymentFlow({
+        standardAmount: standardPrice,
+        getCreditStatus: () => {
             const insufficient = storeCredit < standardPrice;
             return {
                 available: !insufficient,
@@ -124,82 +39,18 @@ const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
                 insufficient,
                 tokenAmount: 0,
             };
-        }
-        if (opt.chain === 'evm' && !EVM_PAYMENTS_ENABLED) return { available: false, note: 'Not configured', insufficient: false, tokenAmount: 0 };
-        if (opt.chain === 'sol' && !SOL_PAYMENTS_ENABLED) return { available: false, note: 'Not configured', insufficient: false, tokenAmount: 0 };
-        if (opt.chain === 'evm' && !isWalletConnected)    return { available: false, note: 'No EVM wallet',  insufficient: false, tokenAmount: 0 };
-        if (opt.chain === 'sol' && !isSolanaConnected)    return { available: false, note: 'No Solana wallet', insufficient: false, tokenAmount: 0 };
+        },
+    });
 
-        const price = tokenPrice(opt.key);
-        if (!price) return { available: false, note: 'Price unavailable', insufficient: false, tokenAmount: 0 };
+    const { selectedKey, setSelectedKey, selectedOption, discount, discountedAmount, savings,
+            tokenPrice, getOptionStatus, executeERC20, executeSPL, evmOptionSelected } = flow;
 
-        const raw          = balances[opt.key as keyof typeof balances] ?? 0;
-        const usdValue     = raw * price;
-        const tokenAmount  = discountedPrice / price;
-        const insufficient = usdValue < discountedPrice;
-
-        return {
-            available: !insufficient,
-            note: `${fmtTok(raw)} ≈ $${fmt(usdValue)}`,
-            insufficient,
-            tokenAmount,
-        };
-    };
-
-    // ── ERC-20 transfer ──────────────────────────────────────────────────────
-    const executeERC20 = async (tokenAddr: `0x${string}`, amountUsd: number, priceKey: PayKey) => {
-        const price = tokenPrice(priceKey);
-        if (!price) throw new Error('Token price unavailable — please try again.');
-        if (!EVM_PAYMENTS_ENABLED) throw new Error('Platform wallet not configured.');
-        const tokenAmt  = amountUsd / price;
-        const amountWei = parseUnits(tokenAmt.toFixed(6), 18);
-        const txHash = await (writeContractAsync as any)({
-            address: tokenAddr,
-            abi: ERC20_ABI,
-            functionName: 'transfer',
-            args: [PLATFORM_EVM_WALLET, amountWei],
-            chainId: mainnet.id,
-        }) as `0x${string}`;
-        // Wait for on-chain finality before treating payment as complete.
-        const receipt = await publicClient!.waitForTransactionReceipt({ hash: txHash });
-        if (receipt.status !== 'success') {
-            throw new Error('Transaction reverted on-chain. No funds were deducted — please try again.');
-        }
-        return txHash as string;
-    };
-
-    // ── SPL token transfer ───────────────────────────────────────────────────
-    const executeSPL = async (amountUsd: number) => {
-        if (!solPublicKey)     throw new Error('Solana wallet not connected.');
-        if (!SOL_PAYMENTS_ENABLED) throw new Error('Platform Solana wallet not configured.');
-        const price = tokenPrice('PC-SOL');
-        if (!price) throw new Error('$PC price unavailable — please try again.');
-
-        // Dynamic import: @solana/spl-token uses Buffer as a global. Loading it
-        // lazily (inside an async fn) ensures the index.tsx Buffer polyfill has
-        // already run before this module initialises.
-        const { getAssociatedTokenAddress, createTransferCheckedInstruction, getMint } =
-            await import('@solana/spl-token');
-
-        const mint        = new PublicKey(PC_SOL_MINT);
-        const platformPub = new PublicKey(PLATFORM_SOL_WALLET);
-        const mintInfo    = await getMint(connection, mint);
-        const decimals    = mintInfo.decimals;
-        const rawAmt      = BigInt(Math.round((amountUsd / price) * 10 ** decimals));
-
-        const [userAta, platformAta] = await Promise.all([
-            getAssociatedTokenAddress(mint, solPublicKey),
-            getAssociatedTokenAddress(mint, platformPub),
-        ]);
-
-        const instruction = createTransferCheckedInstruction(
-            userAta, mint, platformAta, solPublicKey, rawAmt, decimals
-        );
-        const tx = new Transaction().add(instruction);
-        const txHash = await sendTransaction(tx, connection);
-        await connection.confirmTransaction(txHash, 'confirmed');
-        return txHash;
-    };
+    // Reset on mount
+    useEffect(() => {
+        setStep('initial');
+        setErrorMessage('');
+        setSelectedKey('credit');
+    }, [item.id]);
 
     // ── Main confirm handler ─────────────────────────────────────────────────
     const handleConfirm = async () => {
@@ -213,15 +64,15 @@ const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
             if (selectedKey === 'credit') {
                 await buyShopItem(item.id);           // throws on any failure
             } else if (selectedKey === 'DIG') {
-                completedTxHash = await executeERC20(DIG_ADDRESS, discountedPrice, 'DIG');
+                completedTxHash = await executeERC20(DIG_ADDRESS, discountedAmount, 'DIG');
                 paymentInfo = { txHash: completedTxHash, token: 'DIG', discountPct: discount };
                 await buyShopItem(item.id, paymentInfo); // throws if Firestore write fails
             } else if (selectedKey === 'PC-ETH') {
-                completedTxHash = await executeERC20(PC_ETH_ADDRESS, discountedPrice, 'PC-ETH');
+                completedTxHash = await executeERC20(PC_ETH_ADDRESS, discountedAmount, 'PC-ETH');
                 paymentInfo = { txHash: completedTxHash, token: 'PC-ETH', discountPct: discount };
                 await buyShopItem(item.id, paymentInfo);
             } else if (selectedKey === 'PC-SOL') {
-                completedTxHash = await executeSPL(discountedPrice);
+                completedTxHash = await executeSPL(discountedAmount);
                 paymentInfo = { txHash: completedTxHash, token: 'PC-SOL', discountPct: discount };
                 await buyShopItem(item.id, paymentInfo);
             }
@@ -306,25 +157,12 @@ const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
 
         // ── initial ──────────────────────────────────────────────────────────
         const currentPrice = tokenPrice(selectedKey);
-        const tokenAmt     = currentPrice ? discountedPrice / currentPrice : null;
-        const evmOptionSelected = selectedOption.chain === 'evm';
+        const tokenAmt     = currentPrice ? discountedAmount / currentPrice : null;
 
         return (
             <>
-                {/* Wrong-network warning */}
-                {isWalletConnected && !isCorrectChain && evmOptionSelected && (
-                    <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3">
-                        <p className="text-xs text-red-300 font-medium">
-                            ⚠ Wrong network — switch to a supported chain to pay with an EVM token.
-                        </p>
-                        <button
-                            onClick={switchToCorrectChain}
-                            className="flex-shrink-0 text-xs font-bold text-red-200 border border-red-700/60 rounded-lg px-2.5 py-1 hover:bg-red-900/40 transition-colors"
-                        >
-                            Switch
-                        </button>
-                    </div>
-                )}
+                <WrongNetworkBanner evmOptionSelected={evmOptionSelected} />
+
                 {/* Item header */}
                 <div className="flex gap-4 items-center mb-4">
                     <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-brand-dark/60 border border-yellow-900/20">
@@ -348,53 +186,19 @@ const ShopBuyModal: React.FC<ShopBuyModalProps> = ({ item, onClose }) => {
                     {discount > 0 && (
                         <div className="flex justify-between">
                             <span className="text-green-400 font-semibold">With {selectedOption.label} ({Math.round(discount * 100)}% off):</span>
-                            <span className="font-bold text-green-300">${fmt(discountedPrice)}</span>
+                            <span className="font-bold text-green-300">${fmt(discountedAmount)}</span>
                         </div>
                     )}
                 </div>
 
                 {/* Payment options */}
                 <p className="text-sm font-medium text-gray-300 mb-2">Pay with:</p>
-                <div className="grid grid-cols-2 gap-2">
-                    {PAYMENT_OPTIONS.map(opt => {
-                        const status     = getOptionStatus(opt);
-                        const isSelected = selectedKey === opt.key;
-                        const isDisabled = !status.available;
-
-                        return (
-                            <button
-                                key={opt.key}
-                                onClick={() => !isDisabled && setSelectedKey(opt.key)}
-                                disabled={isDisabled}
-                                className={`flex flex-col items-start gap-1.5 p-3 rounded-xl border text-left transition-all duration-150
-                                    ${isSelected ? 'border-brand-gold bg-brand-gold/10' : 'border-yellow-900/30 hover:border-brand-gold/40'}
-                                    ${isDisabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
-                                `}
-                            >
-                                <div className="flex items-center gap-2 w-full">
-                                    {opt.logo ? (
-                                        <img src={opt.logo} alt={opt.label} className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
-                                    ) : (
-                                        <div className="w-5 h-5 rounded-full bg-brand-gold/20 border border-brand-gold/30 flex items-center justify-center flex-shrink-0">
-                                            <span className="text-[6px] font-bold text-brand-gold">SC</span>
-                                        </div>
-                                    )}
-                                    <span className={`text-xs font-bold flex-1 ${isSelected ? 'text-brand-gold' : 'text-gray-300'}`}>{opt.label}</span>
-                                    {opt.discount > 0 && (
-                                        <span className="text-[9px] font-black text-green-400">-{Math.round(opt.discount * 100)}%</span>
-                                    )}
-                                </div>
-                                <div className="pl-7 text-[10px] leading-tight">
-                                    {status.insufficient ? (
-                                        <span className="text-red-400">Insufficient — {status.note}</span>
-                                    ) : (
-                                        <span className="text-gray-500">{status.note}</span>
-                                    )}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
+                <PaymentOptionGrid
+                    options={PAYMENT_OPTIONS}
+                    selectedKey={selectedKey}
+                    onSelect={setSelectedKey}
+                    getOptionStatus={getOptionStatus}
+                />
 
                 {/* Token amount preview */}
                 {selectedKey !== 'credit' && tokenAmt !== null && (
