@@ -49,8 +49,21 @@ interface AlchemyFloorPriceResponse {
     looksRare?: AlchemyFloorPriceMarket;
 }
 
+// In-memory cache for floor price results keyed by "network:contractAddress".
+// TTL is 5 minutes; entries are evicted lazily on next read.
+const FLOOR_PRICE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface FloorPriceCacheEntry {
+    value: { floorPriceEth: number; source: string } | null;
+    fetchedAt: number; // Date.now()
+}
+
+const floorPriceCache = new Map<string, FloorPriceCacheEntry>();
+
 /**
  * Fetch the collection floor price for a contract address via Alchemy.
+ * Results are cached in-memory for 5 minutes per (network, contractAddress)
+ * pair to avoid hitting Alchemy rate limits on rapid repeated appraisals.
  * Tries eth-mainnet by default (where most valued collections live).
  * Returns { floorPriceEth, source } on success, or null if unavailable.
  */
@@ -60,6 +73,12 @@ export async function fetchCollectionFloorPrice(
 ): Promise<{ floorPriceEth: number; source: string } | null> {
     const apiKey = process.env.ALCHEMY_API_KEY;
     if (!apiKey || !contractAddress) return null;
+
+    const cacheKey = `${network}:${contractAddress.toLowerCase()}`;
+    const cached = floorPriceCache.get(cacheKey);
+    if (cached && Date.now() - cached.fetchedAt < FLOOR_PRICE_CACHE_TTL_MS) {
+        return cached.value;
+    }
 
     try {
         const url = new URL(
@@ -81,6 +100,7 @@ export async function fetchCollectionFloorPrice(
             ['LooksRare', data.looksRare],
         ];
 
+        let result: { floorPriceEth: number; source: string } | null = null;
         for (const [source, market] of markets) {
             if (
                 market &&
@@ -88,11 +108,13 @@ export async function fetchCollectionFloorPrice(
                 typeof market.floorPrice === 'number' &&
                 market.floorPrice > 0
             ) {
-                return { floorPriceEth: market.floorPrice, source };
+                result = { floorPriceEth: market.floorPrice, source };
+                break;
             }
         }
 
-        return null;
+        floorPriceCache.set(cacheKey, { value: result, fetchedAt: Date.now() });
+        return result;
     } catch (err) {
         console.warn('fetchCollectionFloorPrice failed:', err);
         return null;
