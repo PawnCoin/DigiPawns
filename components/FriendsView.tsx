@@ -56,7 +56,7 @@ const FriendsView: React.FC = () => {
                             {user.isAdmin && <span className="text-[9px] bg-brand-gold/20 text-brand-gold border border-brand-gold/30 px-1.5 py-0.5 rounded font-bold">ADMIN</span>}
                         </div>
                         {user.walletAddress
-                            ? <EnsName address={user.walletAddress} className="text-gray-500 text-xs font-mono truncate" />
+                            ? <EnsName address={user.walletAddress} className="text-gray-500 text-xs font-mono truncate" copyable />
                             : <span className="text-gray-500 text-xs font-mono">No wallet</span>}
                         {user.bio && <p className="text-gray-400 text-xs mt-0.5 truncate">{user.bio}</p>}
                     </div>
@@ -133,7 +133,7 @@ const FriendsView: React.FC = () => {
                                 <div className="flex-1">
                                     <p className="text-white font-semibold">{user.username}</p>
                                     {user.walletAddress
-                                        ? <EnsName address={user.walletAddress} className="text-gray-500 text-xs font-mono" />
+                                        ? <EnsName address={user.walletAddress} className="text-gray-500 text-xs font-mono" copyable />
                                         : <span className="text-gray-500 text-xs font-mono">No wallet</span>}
                                 </div>
                                 {isFriend(user.uid!) ? (

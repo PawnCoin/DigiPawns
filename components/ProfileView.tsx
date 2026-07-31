@@ -6,6 +6,36 @@ import { toast } from 'sonner';
 import { CheckCircleIcon } from './IconComponents';
 import EnsName from './EnsName';
 
+/** Small copy-to-clipboard icon button. */
+const CopyIconButton: React.FC<{ text: string; label?: string }> = ({ text, label = 'Copy address' }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success('Copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+  return (
+    <button onClick={handleCopy} title={copied ? 'Copied!' : label}
+      className="ml-2 opacity-50 hover:opacity-100 transition-opacity flex-shrink-0">
+      {copied ? (
+        <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      )}
+    </button>
+  );
+};
+
 const Toggle: React.FC<{ label: string; enabled: boolean; onChange: (enabled: boolean) => void }> = ({ label, enabled, onChange }) => (
     <label className="flex items-center justify-between cursor-pointer">
         <span className="text-gray-300">{label}</span>
@@ -117,7 +147,10 @@ const ProfileView: React.FC = () => {
                             <label className="block text-sm font-medium text-gray-400">Connected Wallet</label>
                             {walletAddress ? (
                                 <div className="mt-1 bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3">
-                                    <EnsName address={walletAddress} className="block font-mono text-sm text-green-400 break-all select-all" prefixLen={10} suffixLen={6} />
+                                    <div className="flex items-center gap-1">
+                                        <EnsName address={walletAddress} className="font-mono text-sm text-green-400 break-all select-all flex-1" prefixLen={10} suffixLen={6} />
+                                        <CopyIconButton text={walletAddress} label="Copy wallet address" />
+                                    </div>
                                     <p className="font-mono text-xs text-gray-600 break-all select-all mt-0.5">{walletAddress}</p>
                                 </div>
                             ) : (
@@ -138,9 +171,10 @@ const ProfileView: React.FC = () => {
                         <div>
                             <label className="block text-sm font-medium text-gray-400">Solana Wallet</label>
                             {isSolanaConnected && solanaAddress ? (
-                                <p className="mt-1 font-mono text-sm text-purple-400 break-all bg-brand-dark border border-purple-900/40 rounded-md py-2 px-3 select-all">
-                                    {solanaAddress}
-                                </p>
+                                <div className="mt-1 flex items-center gap-1 bg-brand-dark border border-purple-900/40 rounded-md py-2 px-3">
+                                    <p className="font-mono text-sm text-purple-400 break-all select-all flex-1">{solanaAddress}</p>
+                                    <CopyIconButton text={solanaAddress} label="Copy Solana address" />
+                                </div>
                             ) : (
                                 <div className="mt-1 flex items-center gap-3 bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3">
                                     <span className="text-sm text-gray-500 flex-1">No Solana wallet connected</span>

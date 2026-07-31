@@ -3,6 +3,38 @@ import { DigiPawnsFullLogo, WalletIcon, LogOutIcon } from './IconComponents';
 import { useAppContext } from '../contexts/AppContext';
 import useRouter from '../hooks/useRouter';
 import EnsName from './EnsName';
+import { toast } from 'sonner';
+
+/** Small inline copy-to-clipboard button used for raw address strings. */
+const CopyButton: React.FC<{ text: string }> = ({ text }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success('Copied!');
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Failed to copy');
+    }
+  };
+  return (
+    <button onClick={handleCopy} title={copied ? 'Copied!' : 'Copy address'}
+      className="opacity-40 hover:opacity-100 transition-opacity flex-shrink-0 leading-none">
+      {copied ? (
+        <svg className="w-3.5 h-3.5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      )}
+    </button>
+  );
+};
 
 const Header: React.FC = () => {
   const {
@@ -151,10 +183,13 @@ const Header: React.FC = () => {
                       <div className="px-4 py-2 mb-1 border-b border-yellow-900/20">
                         <p className="text-white font-semibold text-sm truncate">{profile.username}</p>
                         {walletAddress && (
-                          <p className="text-gray-500 text-xs font-mono">⬡ <EnsName address={walletAddress} /></p>
+                          <p className="text-gray-500 text-xs font-mono">⬡ <EnsName address={walletAddress} copyable /></p>
                         )}
                         {solanaAddress && (
-                          <p className="text-purple-500/80 text-xs font-mono">◎ {formatAddress(solanaAddress)}</p>
+                          <span className="flex items-center gap-1 text-purple-500/80 text-xs font-mono">
+                            ◎ {formatAddress(solanaAddress)}
+                            <CopyButton text={solanaAddress} />
+                          </span>
                         )}
                       </div>
 
