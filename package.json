@@ -33,9 +33,13 @@
     "wagmi": "^2.19.5"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "autoprefixer": "^10.5.4",
     "firebase-tools": "^15.24.0",
+    "postcss": "^8.5.25",
+    "tailwindcss": "^4.3.3",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

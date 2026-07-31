@@ -1,3 +1,5 @@
+import './index.css';
+
 // Polyfill Buffer globally for @solana/spl-token and @solana/web3.js.
 // These libraries reference Buffer as a global; Vite externalises Node's buffer,
 // so we provide the browser-compatible npm shim before any Solana imports run.
