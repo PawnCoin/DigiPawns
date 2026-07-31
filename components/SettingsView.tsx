@@ -20,8 +20,37 @@ interface NftGridItemProps {
     onSell?: () => void;
 }
 
+// Map Alchemy network prefixes (used in nft.id) to badge metadata.
+// Covers both mainnet and testnet variants so portfolio NFTs always get a badge.
+const ALCHEMY_NETWORK_BADGE: Record<string, { badge: string; color: string }> = {
+    'eth-mainnet':     { badge: 'ETH',  color: 'text-blue-300' },
+    'polygon-mainnet': { badge: 'MATIC', color: 'text-purple-300' },
+    'base-mainnet':    { badge: 'BASE',  color: 'text-indigo-300' },
+    'base-sepolia':    { badge: 'BASE',  color: 'text-indigo-300' },
+    'solana-mainnet':  { badge: 'SOL',   color: 'text-green-300' },
+    'arb-mainnet':     { badge: 'ARB',   color: 'text-sky-300' },
+    'opt-mainnet':     { badge: 'OP',    color: 'text-red-300' },
+};
+
+/**
+ * Resolve a chain badge from an NFT.
+ * 1. If the nft carries a `.chain` label (set by OpenSea/browse path), match via SUPPORTED_CHAINS.
+ * 2. Otherwise derive from the Alchemy network prefix in nft.id (e.g. "eth-mainnet-0xabc-1").
+ */
+function resolveChainBadge(nft: Nft & { chain?: string }): { badge: string; color: string } | undefined {
+    if (nft.chain) {
+        const match = SUPPORTED_CHAINS.find(c => c.label === nft.chain);
+        if (match) return { badge: match.badge, color: match.color };
+    }
+    const id = String(nft.id);
+    for (const [prefix, meta] of Object.entries(ALCHEMY_NETWORK_BADGE)) {
+        if (id.startsWith(prefix + '-')) return meta;
+    }
+    return undefined;
+}
+
 const NftGridItem: React.FC<NftGridItemProps> = ({ nft, onAppraise, onSell }) => {
-    const chainBadge = SUPPORTED_CHAINS.find(c => c.label === (nft as any).chain);
+    const chainBadge = resolveChainBadge(nft);
     return (
         <div className="bg-brand-dark/60 rounded-lg overflow-hidden border border-yellow-900/30 group transition-all duration-300 hover:border-brand-gold/60 hover:shadow-lg flex flex-col">
             <div className="w-full h-40 bg-brand-dark relative flex-shrink-0">
