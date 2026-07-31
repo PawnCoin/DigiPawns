@@ -9,6 +9,7 @@ import {
     deleteDoc, getDocs, limit, addDoc, writeBatch
 } from 'firebase/firestore';
 import { useAccount, useConnect, useDisconnect, useChainId, useSwitchChain } from 'wagmi';
+import { deleteImage } from '../services/storageService';
 import { useWallet as useSolanaWallet } from '@solana/wallet-adapter-react';
 import type { WalletName } from '@solana/wallet-adapter-base';
 import { TARGET_CHAIN, WALLET_OPTIONS, SUPPORTED_EVM_CHAINS, SUPPORTED_EVM_CHAIN_IDS } from '../lib/web3';
@@ -465,6 +466,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const adminDeleteShopItem = async (id: string) => {
+        const item = shopInventory.find(i => i.id === id);
+        if (item?.imageUrl) await deleteImage(item.imageUrl).catch(console.error);
         await deleteDoc(doc(db, 'shopInventory', id));
     };
 
@@ -567,6 +570,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
 
     const adminDeleteCollection = async (id: string) => {
+        const col = collections.find(c => c.id === id);
+        if (col?.imageUrl) await deleteImage(col.imageUrl).catch(console.error);
         await deleteDoc(doc(db, 'collections', id));
     };
 
