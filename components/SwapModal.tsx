@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 import { usePrices } from '../hooks/usePrices';
 import { useTokenBalances } from '../hooks/useTokenBalances';
 
@@ -97,7 +98,11 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
     const jupInitted = useRef(false);
 
     const { prices }   = usePrices();
-    const { balances } = useTokenBalances();
+    const { balances, refetch } = useTokenBalances();
+
+    // Keep a ref so the one-time Jupiter init closure always calls the latest refetch
+    const refetchRef = useRef(refetch);
+    useEffect(() => { refetchRef.current = refetch; }, [refetch]);
 
     // Sync defaultToken whenever modal opens; clear any blocked-popup notice
     useEffect(() => {
@@ -148,6 +153,15 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
             onSuccess: ({ txid }: { txid: string }) => {
                 console.log('[Jupiter] swap success:', txid);
                 onSwapComplete?.();
+                // Wait ~2 s for the RPC to index the transaction, then refresh balances
+                setTimeout(() => {
+                    try {
+                        refetchRef.current();
+                    } catch (err) {
+                        console.error('[Jupiter] balance refetch failed:', err);
+                        toast.error('Swap succeeded but balance refresh failed — tap "Done" to retry.');
+                    }
+                }, 2000);
             },
         });
     }, [jupLoaded, isOpen, selected, onSwapComplete]);
