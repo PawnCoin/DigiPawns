@@ -36,6 +36,71 @@ interface AlchemyGetNftsForOwnerResponse {
 
 const FALLBACK_IMAGE = 'https://placehold.co/200x200/1a1a2e/d4af37?text=No+Image';
 
+// ── Floor price lookup ─────────────────────────────────────────────────────
+
+interface AlchemyFloorPriceMarket {
+    floorPrice?: number;
+    priceCurrency?: string;
+    error?: string;
+}
+
+interface AlchemyFloorPriceResponse {
+    openSea?: AlchemyFloorPriceMarket;
+    looksRare?: AlchemyFloorPriceMarket;
+}
+
+/**
+ * Fetch the collection floor price for a contract address via Alchemy.
+ * Tries eth-mainnet by default (where most valued collections live).
+ * Returns { floorPriceEth, source } on success, or null if unavailable.
+ */
+export async function fetchCollectionFloorPrice(
+    contractAddress: string,
+    network: AlchemyNetwork = 'eth-mainnet',
+): Promise<{ floorPriceEth: number; source: string } | null> {
+    const apiKey = process.env.ALCHEMY_API_KEY;
+    if (!apiKey || !contractAddress) return null;
+
+    try {
+        const url = new URL(
+            `https://${network}.g.alchemy.com/nft/v3/${apiKey}/getFloorPrice`,
+        );
+        url.searchParams.set('contractAddress', contractAddress);
+
+        const res = await fetch(url.toString());
+        if (!res.ok) {
+            console.warn(`Alchemy getFloorPrice returned ${res.status} for ${contractAddress}`);
+            return null;
+        }
+
+        const data: AlchemyFloorPriceResponse = await res.json();
+
+        // Prefer OpenSea floor, fall back to LooksRare
+        const markets: Array<[string, AlchemyFloorPriceMarket | undefined]> = [
+            ['OpenSea', data.openSea],
+            ['LooksRare', data.looksRare],
+        ];
+
+        for (const [source, market] of markets) {
+            if (
+                market &&
+                !market.error &&
+                typeof market.floorPrice === 'number' &&
+                market.floorPrice > 0
+            ) {
+                return { floorPriceEth: market.floorPrice, source };
+            }
+        }
+
+        return null;
+    } catch (err) {
+        console.warn('fetchCollectionFloorPrice failed:', err);
+        return null;
+    }
+}
+
+// ── NFT portfolio fetch ────────────────────────────────────────────────────
+
 /** Fetch NFTs for a single wallet address on one Alchemy network. */
 async function fetchNftsFromNetwork(
     walletAddress: string,

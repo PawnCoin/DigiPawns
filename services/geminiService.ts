@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import type { NftAppraisal, FeaturedNftCategory } from '../types';
+import { fetchCollectionFloorPrice } from './nftService';
 
 // Stable model IDs available on all API key tiers.
 // gemini-2.0-flash: fast, capable, broadly accessible.
@@ -35,6 +36,21 @@ export const getNftAppraisal = async (
 
         const { contractAddress, tokenId, market } = nftInfo;
 
+        // Fetch real collection floor price from Alchemy; proceed even if unavailable.
+        let floorPriceLine = '';
+        try {
+            const floorData = await fetchCollectionFloorPrice(contractAddress);
+            if (floorData) {
+                floorPriceLine = `- Current collection floor price: ${floorData.floorPriceEth} ETH (source: ${floorData.source})`;
+            }
+        } catch (floorErr) {
+            console.warn('Floor price lookup failed, proceeding without it:', floorErr);
+        }
+
+        const marketDataSection = floorPriceLine
+            ? `\n            Real Market Data:\n            ${floorPriceLine}\n`
+            : '';
+
         const prompt = `
             You are a professional NFT appraiser with deep knowledge of the digital asset market.
             Analyze the following NFT and provide a detailed valuation. The user has indicated the NFT is primarily traded on ${market}.
@@ -42,8 +58,8 @@ export const getNftAppraisal = async (
             NFT Details:
             - Contract Address: ${contractAddress}
             - Token ID: ${tokenId}
-
-            Based on simulated market data, collection floor price, rarity of traits (if applicable), artist reputation, and recent sales volume, provide an estimated market value in USD, a confidence score from 0 to 1, a list of key value drivers, a suggested loan value (typically 40% of the estimated value), and a brief justification for your appraisal.
+${marketDataSection}
+            Based on the${floorPriceLine ? ' real market data above,' : ''} collection floor price, rarity of traits (if applicable), artist reputation, and recent sales volume, provide an estimated market value in USD, a confidence score from 0 to 1, a list of key value drivers, a suggested loan value (typically 40% of the estimated value), and a brief justification for your appraisal.${floorPriceLine ? ' Your estimated value should be anchored to the real floor price provided.' : ''}
         `;
 
         const responseSchema = {
