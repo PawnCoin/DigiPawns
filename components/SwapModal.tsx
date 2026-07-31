@@ -89,6 +89,9 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
     const [selected, setSelected] = useState<SwapToken>(defaultToken);
     const [spendUsd, setSpendUsd] = useState<string>('100');
 
+    /** When the browser blocks a popup this holds the URL so we can offer a plain link */
+    const [blockedUrl, setBlockedUrl] = useState<string | null>(null);
+
     // Jupiter Terminal embed state
     const [jupLoaded, setJupLoaded]   = useState(false);
     const jupInitted = useRef(false);
@@ -96,13 +99,17 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
     const { prices }   = usePrices();
     const { balances } = useTokenBalances();
 
-    // Sync defaultToken whenever modal opens
+    // Sync defaultToken whenever modal opens; clear any blocked-popup notice
     useEffect(() => {
         if (isOpen) {
             setSelected(defaultToken);
             setSpendUsd('100');
+            setBlockedUrl(null);
         }
     }, [isOpen, defaultToken]);
+
+    // Clear blocked-popup notice when the user switches token tabs
+    useEffect(() => { setBlockedUrl(null); }, [selected]);
 
     // ── Jupiter Terminal script injection ─────────────────────────────────────
     useEffect(() => {
@@ -154,7 +161,10 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
 
     const openPopup = useCallback((url: string, name: string) => {
         const popup = window.open(url, name, 'width=480,height=700,resizable=yes,scrollbars=yes,noreferrer');
-        if (!popup) window.open(url, '_blank', 'noreferrer');
+        if (!popup) {
+            // Popup was blocked — show an in-modal fallback instead of a second window.open
+            setBlockedUrl(url);
+        }
     }, []);
 
     const handleDone = () => {
@@ -319,6 +329,30 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
                             >
                                 Open on jup.ag instead ↗
                             </button>
+                        </div>
+                    )}
+
+                    {/* ── Popup-blocked notice ─────────────────────────────── */}
+                    {blockedUrl && (
+                        <div className="rounded-xl border border-amber-600/40 bg-amber-950/40 p-4 flex flex-col gap-2">
+                            <div className="flex items-start gap-2">
+                                <span className="text-amber-400 text-lg leading-none shrink-0">⚠️</span>
+                                <div>
+                                    <p className="text-amber-300 font-semibold text-sm">Popup blocked</p>
+                                    <p className="text-amber-200/70 text-xs mt-0.5">
+                                        Your browser prevented the swap window from opening.
+                                        Allow popups for this site in your browser settings, or use the link below.
+                                    </p>
+                                </div>
+                            </div>
+                            <a
+                                href={blockedUrl}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-amber-600/50 bg-amber-900/30 hover:bg-amber-900/50 text-amber-200 font-semibold text-sm transition-colors"
+                            >
+                                Open DEX in new tab ↗
+                            </a>
                         </div>
                     )}
 
