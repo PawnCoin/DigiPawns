@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import type { UserProfile } from '../types';
 import { toast } from 'sonner';
+import EnsName from './EnsName';
 
 const FriendsView: React.FC = () => {
     const { friends, searchUsers, addFriend, removeFriend, loans } = useAppContext();
@@ -54,7 +55,9 @@ const FriendsView: React.FC = () => {
                             <p className="text-white font-bold truncate">{user.username}</p>
                             {user.isAdmin && <span className="text-[9px] bg-brand-gold/20 text-brand-gold border border-brand-gold/30 px-1.5 py-0.5 rounded font-bold">ADMIN</span>}
                         </div>
-                        <p className="text-gray-500 text-xs font-mono truncate">{user.walletAddress || 'No wallet'}</p>
+                        {user.walletAddress
+                            ? <EnsName address={user.walletAddress} className="text-gray-500 text-xs font-mono truncate" />
+                            : <span className="text-gray-500 text-xs font-mono">No wallet</span>}
                         {user.bio && <p className="text-gray-400 text-xs mt-0.5 truncate">{user.bio}</p>}
                     </div>
                     <div className="flex items-center gap-2">
@@ -129,7 +132,9 @@ const FriendsView: React.FC = () => {
                                 </div>
                                 <div className="flex-1">
                                     <p className="text-white font-semibold">{user.username}</p>
-                                    <p className="text-gray-500 text-xs font-mono">{user.walletAddress || 'No wallet'}</p>
+                                    {user.walletAddress
+                                        ? <EnsName address={user.walletAddress} className="text-gray-500 text-xs font-mono" />
+                                        : <span className="text-gray-500 text-xs font-mono">No wallet</span>}
                                 </div>
                                 {isFriend(user.uid!) ? (
                                     <span className="text-xs text-brand-gold border border-brand-gold/30 px-3 py-1 rounded-full">Friends ✓</span>

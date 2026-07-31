@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DigiPawnsFullLogo, WalletIcon, LogOutIcon } from './IconComponents';
 import { useAppContext } from '../contexts/AppContext';
 import useRouter from '../hooks/useRouter';
+import EnsName from './EnsName';
 
 const Header: React.FC = () => {
   const {
@@ -99,7 +100,7 @@ const Header: React.FC = () => {
                 >
                   <span className="w-2 h-2 rounded-full bg-green-400" />
                   <span className="hidden lg:inline text-green-600 mr-0.5">{chainName.split(' ')[0]}</span>
-                  {formatAddress(walletAddress || '')}
+                  <EnsName address={walletAddress || ''} />
                 </span>
               ) : (
                 /* Unsupported chain: Switch Network */
@@ -150,7 +151,7 @@ const Header: React.FC = () => {
                       <div className="px-4 py-2 mb-1 border-b border-yellow-900/20">
                         <p className="text-white font-semibold text-sm truncate">{profile.username}</p>
                         {walletAddress && (
-                          <p className="text-gray-500 text-xs font-mono">⬡ {formatAddress(walletAddress)}</p>
+                          <p className="text-gray-500 text-xs font-mono">⬡ <EnsName address={walletAddress} /></p>
                         )}
                         {solanaAddress && (
                           <p className="text-purple-500/80 text-xs font-mono">◎ {formatAddress(solanaAddress)}</p>

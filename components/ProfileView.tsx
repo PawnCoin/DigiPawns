@@ -4,6 +4,7 @@ import { useAppContext } from '../contexts/AppContext';
 import { fetchNftsForWallet } from '../services/nftService';
 import { toast } from 'sonner';
 import { CheckCircleIcon } from './IconComponents';
+import EnsName from './EnsName';
 
 const Toggle: React.FC<{ label: string; enabled: boolean; onChange: (enabled: boolean) => void }> = ({ label, enabled, onChange }) => (
     <label className="flex items-center justify-between cursor-pointer">
@@ -115,9 +116,10 @@ const ProfileView: React.FC = () => {
                         <div>
                             <label className="block text-sm font-medium text-gray-400">Connected Wallet</label>
                             {walletAddress ? (
-                                <p className="mt-1 font-mono text-sm text-green-400 break-all bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3 select-all">
-                                    {walletAddress}
-                                </p>
+                                <div className="mt-1 bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3">
+                                    <EnsName address={walletAddress} className="block font-mono text-sm text-green-400 break-all select-all" prefixLen={10} suffixLen={6} />
+                                    <p className="font-mono text-xs text-gray-600 break-all select-all mt-0.5">{walletAddress}</p>
+                                </div>
                             ) : (
                                 <div className="mt-1 flex items-center gap-3 bg-brand-dark border border-yellow-900/40 rounded-md py-2 px-3">
                                     <span className="text-sm text-gray-500 flex-1">No wallet connected</span>
