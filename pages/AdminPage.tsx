@@ -29,6 +29,25 @@ const ALCHEMY_CHAIN_LABEL: Record<string, string> = {
     'solana-mainnet':  'Solana',
 };
 
+// Map Alchemy network prefixes (used in nft.id) to badge metadata — mirrors SettingsView.
+const ALCHEMY_NETWORK_BADGE: Record<string, { badge: string; color: string }> = {
+    'eth-mainnet':     { badge: 'ETH',  color: 'text-blue-300' },
+    'polygon-mainnet': { badge: 'MATIC', color: 'text-purple-300' },
+    'base-mainnet':    { badge: 'BASE',  color: 'text-indigo-300' },
+    'base-sepolia':    { badge: 'BASE',  color: 'text-indigo-300' },
+    'solana-mainnet':  { badge: 'SOL',   color: 'text-green-300' },
+    'arb-mainnet':     { badge: 'ARB',   color: 'text-sky-300' },
+    'opt-mainnet':     { badge: 'OP',    color: 'text-red-300' },
+};
+
+function resolveChainBadge(nft: Nft): { badge: string; color: string } | undefined {
+    const id = String(nft.id);
+    for (const [prefix, meta] of Object.entries(ALCHEMY_NETWORK_BADGE)) {
+        if (id.startsWith(prefix + '-')) return meta;
+    }
+    return undefined;
+}
+
 const emptyCollection = (): Omit<Collection, 'id' | 'createdAt'> => ({
     name: '', description: '', imageUrl: '', chain: 'Ethereum',
     floorPrice: 0, currency: 'ETH', totalItems: 0, verified: false, website: '',
@@ -625,25 +644,33 @@ const AdminPage: React.FC = () => {
                                                         <div className="mt-3">
                                                             <p className="text-xs text-gray-500 mb-2">{pickerNfts.length} NFT{pickerNfts.length !== 1 ? 's' : ''} found — click one to pre-fill</p>
                                                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 max-h-60 overflow-y-auto pr-1">
-                                                                {pickerNfts.map(nft => (
-                                                                    <button
-                                                                        key={String(nft.id)}
-                                                                        type="button"
-                                                                        onClick={() => handlePickNft(nft)}
-                                                                        title={`${nft.name}\n${nft.collection}`}
-                                                                        className="group relative rounded-lg overflow-hidden border border-yellow-900/30 hover:border-brand-gold/60 transition-colors bg-brand-dark aspect-square"
-                                                                    >
-                                                                        <img
-                                                                            src={nft.imageUrl}
-                                                                            alt={nft.name}
-                                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                                                                            onError={e => { (e.currentTarget as HTMLImageElement).src = 'https://placehold.co/80x80/1a1a2e/d4af37?text=NFT'; }}
-                                                                        />
-                                                                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1">
-                                                                            <p className="text-white text-[9px] font-semibold leading-tight line-clamp-2">{nft.name}</p>
-                                                                        </div>
-                                                                    </button>
-                                                                ))}
+                                                                {pickerNfts.map(nft => {
+                                                                    const chainBadge = resolveChainBadge(nft);
+                                                                    return (
+                                                                        <button
+                                                                            key={String(nft.id)}
+                                                                            type="button"
+                                                                            onClick={() => handlePickNft(nft)}
+                                                                            title={`${nft.name}\n${nft.collection}`}
+                                                                            className="group relative rounded-lg overflow-hidden border border-yellow-900/30 hover:border-brand-gold/60 transition-colors bg-brand-dark aspect-square"
+                                                                        >
+                                                                            <img
+                                                                                src={nft.imageUrl}
+                                                                                alt={nft.name}
+                                                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                                                                                onError={e => { (e.currentTarget as HTMLImageElement).src = 'https://placehold.co/80x80/1a1a2e/d4af37?text=NFT'; }}
+                                                                            />
+                                                                            {chainBadge && (
+                                                                                <span className={`absolute top-1 right-1 text-[9px] font-black px-1.5 py-0.5 rounded bg-brand-dark/80 ${chainBadge.color}`}>
+                                                                                    {chainBadge.badge}
+                                                                                </span>
+                                                                            )}
+                                                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-1">
+                                                                                <p className="text-white text-[9px] font-semibold leading-tight line-clamp-2">{nft.name}</p>
+                                                                            </div>
+                                                                        </button>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         </div>
                                                     )}
