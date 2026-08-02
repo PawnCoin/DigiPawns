@@ -376,27 +376,53 @@ const SwapModal: React.FC<SwapModalProps> = ({ isOpen, onClose, defaultToken = '
                         <div className="flex flex-col gap-3">
                             <p className="text-xs text-gray-500 text-center">
                                 Choose your preferred DEX — the output token is pre-filled for you.
-                                <br />The swap opens in a popup; return here and click&nbsp;
+                                <br />Click a button to open a popup, or use the&nbsp;
+                                <svg xmlns="http://www.w3.org/2000/svg" className="inline w-3 h-3 mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                &nbsp;icon to open in a new tab instead. Return here and click&nbsp;
                                 <strong className="text-gray-300">Done</strong> to refresh your balances.
                             </p>
 
-                            <button
-                                onClick={() => openPopup(evmLinks.uniswap, 'digipawns-uni-swap')}
-                                className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#FC72FF]/40 bg-[#FC72FF]/10 hover:bg-[#FC72FF]/20 text-white font-bold transition-all"
-                            >
-                                <span className="text-lg">🦄</span>
-                                Swap on Uniswap
-                                <span className="text-[10px] text-gray-400 ml-auto">Opens popup ↗</span>
-                            </button>
+                            {/* Uniswap — popup button + new-tab icon */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => openPopup(evmLinks.uniswap, 'digipawns-uni-swap')}
+                                    className="flex-1 flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#FC72FF]/40 bg-[#FC72FF]/10 hover:bg-[#FC72FF]/20 text-white font-bold transition-all"
+                                >
+                                    <span className="text-lg">🦄</span>
+                                    Swap on Uniswap
+                                    <span className="text-[10px] text-gray-400 ml-auto">popup ↗</span>
+                                </button>
+                                <a
+                                    href={evmLinks.uniswap}
+                                    target="_blank"
+                                    rel="noreferrer noopener"
+                                    title="Open Uniswap in new tab"
+                                    className="flex items-center justify-center w-11 shrink-0 rounded-xl border border-[#FC72FF]/30 bg-[#FC72FF]/5 hover:bg-[#FC72FF]/15 text-gray-400 hover:text-white transition-all"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                </a>
+                            </div>
 
-                            <button
-                                onClick={() => openPopup(evmLinks.inch, 'digipawns-1inch-swap')}
-                                className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#1B314F]/60 bg-[#1B314F]/30 hover:bg-[#1B314F]/60 text-white font-bold transition-all"
-                            >
-                                <span className="text-base font-black text-[#2DC1BF]">1inch</span>
-                                Swap on 1inch
-                                <span className="text-[10px] text-gray-400 ml-auto">Opens popup ↗</span>
-                            </button>
+                            {/* 1inch — popup button + new-tab icon */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => openPopup(evmLinks.inch, 'digipawns-1inch-swap')}
+                                    className="flex-1 flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[#1B314F]/60 bg-[#1B314F]/30 hover:bg-[#1B314F]/60 text-white font-bold transition-all"
+                                >
+                                    <span className="text-base font-black text-[#2DC1BF]">1inch</span>
+                                    Swap on 1inch
+                                    <span className="text-[10px] text-gray-400 ml-auto">popup ↗</span>
+                                </button>
+                                <a
+                                    href={evmLinks.inch}
+                                    target="_blank"
+                                    rel="noreferrer noopener"
+                                    title="Open 1inch in new tab"
+                                    className="flex items-center justify-center w-11 shrink-0 rounded-xl border border-[#1B314F]/50 bg-[#1B314F]/20 hover:bg-[#1B314F]/50 text-gray-400 hover:text-white transition-all"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                                </a>
+                            </div>
                         </div>
                     )}
 
