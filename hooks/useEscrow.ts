@@ -1,5 +1,77 @@
-import { useWriteContract, usePublicClient } from 'wagmi';
-import { ESCROW_ABI, ERC721_MINIMAL_ABI, ESCROW_ADDRESS } from '../services/escrowService';
+import { useWriteContract, usePublicClient, useReadContracts } from 'wagmi';
+import { ESCROW_ABI, ERC721_MINIMAL_ABI, ESCROW_ADDRESS, TIER, type TierValue } from '../services/escrowService';
+
+// ── Tier + reward preview (read-only, called before depositing) ───────────────
+
+export interface TierPreview {
+  /** Resolved tier value, or null while loading / no escrow configured. */
+  tier: TierValue | null;
+  /** Whether the reward system is active on the contract (rewardToken != zero). */
+  rewardConfigured: boolean;
+  /** Expected reward on repayment, in the reward token's base unit (wei). */
+  rewardAmount: bigint;
+  /** Reward token address (null when not configured). */
+  rewardToken: `0x${string}` | null;
+  /** Gold multiplier percentage integer (e.g. 150 = 1.5×). */
+  goldMultiplier: bigint;
+  isLoading: boolean;
+}
+
+const ZERO_ADDR = '0x0000000000000000000000000000000000000000' as const;
+
+/**
+ * Reads the current borrower tier and expected repayment reward from the
+ * escrow contract. Safe to call before the loan exists on-chain — it uses
+ * `getTierForAddress` plus the contract's reward config state variables.
+ *
+ * Returns a stable null/zero result when the escrow is not deployed or the
+ * user's wallet is not connected.
+ */
+export function useEscrowTierPreview(userAddress?: `0x${string}`): TierPreview {
+  const enabled = !!ESCROW_ADDRESS && !!userAddress;
+  const escrowAddr = ESCROW_ADDRESS as `0x${string}`;
+
+  const { data, isLoading } = useReadContracts({
+    contracts: [
+      {
+        address: escrowAddr,
+        abi: ESCROW_ABI,
+        functionName: 'getTierForAddress',
+        args: [userAddress ?? ZERO_ADDR],
+      },
+      { address: escrowAddr, abi: ESCROW_ABI, functionName: 'rewardToken' },
+      { address: escrowAddr, abi: ESCROW_ABI, functionName: 'baseRewardAmount' },
+      { address: escrowAddr, abi: ESCROW_ABI, functionName: 'goldRewardMultiplier' },
+    ],
+    query: { enabled },
+  });
+
+  if (!data) {
+    return { tier: null, rewardConfigured: false, rewardAmount: 0n, rewardToken: null, goldMultiplier: 150n, isLoading: enabled && isLoading };
+  }
+
+  const tier         = (data[0].status === 'success' ? data[0].result as number : null) as TierValue | null;
+  const rewardTkAddr = (data[1].status === 'success' ? data[1].result as `0x${string}` : ZERO_ADDR);
+  const baseReward   = (data[2].status === 'success' ? data[2].result as bigint : 0n);
+  const multiplier   = (data[3].status === 'success' ? data[3].result as bigint : 150n);
+
+  const rewardConfigured = !!rewardTkAddr && rewardTkAddr !== ZERO_ADDR && baseReward > 0n;
+
+  let rewardAmount = 0n;
+  if (rewardConfigured && tier !== null) {
+    if (tier === TIER.GOLD)     rewardAmount = (baseReward * multiplier) / 100n;
+    else if (tier === TIER.STANDARD) rewardAmount = baseReward;
+  }
+
+  return {
+    tier,
+    rewardConfigured,
+    rewardAmount,
+    rewardToken: rewardConfigured ? rewardTkAddr : null,
+    goldMultiplier: multiplier,
+    isLoading,
+  };
+}
 
 // ── Borrower hook: approve + deposit NFT into escrow ─────────────────────────
 

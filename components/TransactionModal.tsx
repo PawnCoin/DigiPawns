@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatEther } from 'viem';
 import type { NftAppraisal, Loan, LoanTerms } from '../types';
 import { WalletIcon, CheckCircleIcon, ErrorIcon } from './IconComponents';
-import { useEscrowDeposit, type DepositStep } from '../hooks/useEscrow';
-import { ESCROW_ADDRESS } from '../services/escrowService';
+import { useEscrowDeposit, useEscrowTierPreview, type DepositStep } from '../hooks/useEscrow';
+import { ESCROW_ADDRESS, TIER } from '../services/escrowService';
 import { useChainId, useAccount, useSwitchChain } from 'wagmi';
 import { baseSepolia } from 'wagmi/chains';
 
@@ -30,6 +31,73 @@ const Spinner: React.FC = () => (
     </svg>
 );
 
+// ── Tier & reward preview badge ───────────────────────────────────────────────
+interface TierRewardBadgeProps {
+    tierPreview: ReturnType<typeof useEscrowTierPreview>;
+}
+
+const TierRewardBadge: React.FC<TierRewardBadgeProps> = ({ tierPreview }) => {
+    const { tier, rewardConfigured, rewardAmount, goldMultiplier, isLoading } = tierPreview;
+
+    // Don't render when the escrow isn't deployed or reward system isn't configured
+    if (!ESCROW_ADDRESS || !rewardConfigured) return null;
+
+    // Loading skeleton
+    if (isLoading || tier === null) {
+        return (
+            <div className="mt-3 h-10 rounded-xl bg-brand-dark/60 border border-yellow-900/20 animate-pulse" />
+        );
+    }
+
+    // NONE tier — reward will be zero, no point showing it
+    if (tier === TIER.NONE) {
+        return (
+            <div className="mt-3 flex items-center gap-2.5 rounded-xl border border-gray-700/40 bg-brand-dark/40 px-4 py-2.5">
+                <span className="text-base leading-none">—</span>
+                <div className="flex-1 min-w-0">
+                    <p className="text-xs text-gray-400">
+                        No $DIG or $PC detected in your wallet.{' '}
+                        <span className="text-gray-500">Hold either token to earn rewards on repayment.</span>
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    const isGold = tier === TIER.GOLD;
+    const formattedAmount = parseFloat(formatEther(rewardAmount)).toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+    });
+    const multiplierDisplay = `${(Number(goldMultiplier) / 100).toFixed(1)}×`;
+
+    return (
+        <div className={`mt-3 flex items-center gap-2.5 rounded-xl border px-4 py-2.5 ${
+            isGold
+                ? 'border-brand-gold/40 bg-brand-gold/10'
+                : 'border-blue-700/40 bg-blue-900/15'
+        }`}>
+            <span className="text-xl leading-none flex-shrink-0">{isGold ? '🥇' : '⭐'}</span>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`text-xs font-bold tracking-wide ${isGold ? 'text-brand-gold' : 'text-blue-300'}`}>
+                        {isGold ? 'GOLD TIER' : 'STANDARD TIER'}
+                    </span>
+                    {isGold && (
+                        <span className="text-xs bg-brand-gold/20 text-brand-gold rounded-full px-2 py-0.5 font-semibold">
+                            {multiplierDisplay} bonus reward
+                        </span>
+                    )}
+                </div>
+                <p className="text-xs text-gray-300 mt-0.5">
+                    Repay on time and earn{' '}
+                    <span className="font-semibold text-white">{formattedAmount} tokens</span>
+                    {' '}back automatically.
+                </p>
+            </div>
+        </div>
+    );
+};
+
 const TransactionModal: React.FC<TransactionModalProps> = ({
     isOpen, onClose, appraisal, nftDetails, loanTerms, onSuccess,
     contractAddress, tokenId, numericLoanId,
@@ -38,8 +106,9 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     const [errorMessage, setErrorMessage] = useState('');
     const { approveAndDeposit, escrowReady } = useEscrowDeposit();
     const chainId = useChainId();
-    const { isConnected: isEvmConnected } = useAccount();
+    const { isConnected: isEvmConnected, address: evmAddress } = useAccount();
     const { switchChainAsync } = useSwitchChain();
+    const tierPreview = useEscrowTierPreview(evmAddress);
     const isOnBaseSepolia = chainId === baseSepolia.id;
     const showNetworkWarning = isEvmConnected && !isOnBaseSepolia;
     const switchToBaseSepolia = async () => {
@@ -163,6 +232,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                                 </span>
                             </div>
                         </div>
+
+                        {/* ── Tier & reward preview ──────────────────────────────── */}
+                        <TierRewardBadge tierPreview={tierPreview} />
+
                         {useOnChain && (
                             <div className="mt-3 flex items-center gap-2 text-xs text-green-400 bg-green-900/20 border border-green-700/40 rounded-lg px-3 py-2">
                                 <span className="w-2 h-2 bg-green-400 rounded-full flex-shrink-0" />
