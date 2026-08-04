@@ -3,13 +3,13 @@ import { useAppContext } from '../contexts/AppContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { Collection, Loan, UserProfile, ShopItem, Nft } from '../types';
 import { toast } from 'sonner';
-import { useEscrowAdmin } from '../hooks/useEscrow';
+import { useEscrowAdmin, useEscrowSecurity } from '../hooks/useEscrow';
 import { ESCROW_ADDRESS } from '../services/escrowService';
 import { uploadImage, sanitiseFilename, deleteImage, isStorageUrl, resizeImageFile } from '../services/storageService';
 import { fetchNftsForWallet, fetchSolanaNftsFromWallet, isSolanaAddress } from '../services/nftService';
 import { useAccount } from 'wagmi';
 
-type AdminTab = 'users' | 'loans' | 'collections' | 'shop';
+type AdminTab = 'users' | 'loans' | 'collections' | 'shop' | 'security';
 
 // Image URLs that are known to hotlink-block or produce non-resellable placeholder content.
 const isSuspectImageUrl = (url: string) =>
@@ -80,6 +80,14 @@ const AdminPage: React.FC = () => {
     const colFileRef = useRef<HTMLInputElement>(null);
     const shopFileRef = useRef<HTMLInputElement>(null);
     const { releaseToOwner, sweepToShop, escrowReady } = useEscrowAdmin();
+
+    // Security controls
+    const { paused, pausedLoading, pause, unpause, blacklist, unblacklist, freezeLoan, unfreezeLoan, refetchPaused, escrowReady: securityReady } = useEscrowSecurity();
+    const [securityLoading, setSecurityLoading] = useState<string | null>(null);
+    const [blacklistInput, setBlacklistInput] = useState('');
+    const [unblacklistInput, setUnblacklistInput] = useState('');
+    const [freezeInput, setFreezeInput] = useState('');
+    const [unfreezeInput, setUnfreezeInput] = useState('');
 
     // Wallet NFT browser state
     const [walletPickerOpen, setWalletPickerOpen] = useState(false);
@@ -307,6 +315,7 @@ const AdminPage: React.FC = () => {
                     <TabBtn id="loans" label="All Loans" count={allLoans.length} />
                     <TabBtn id="collections" label="Collections" count={collections.length} />
                     <TabBtn id="shop" label="Shop Floor" count={shopInventory.length} />
+                    <TabBtn id="security" label="🔒 Security" count={0} />
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -806,6 +815,213 @@ const AdminPage: React.FC = () => {
                                 </div>
                             </div>
                         )}
+                        {/* ── SECURITY TAB ── */}
+                        {tab === 'security' && (
+                            <div className="space-y-6 max-w-2xl">
+
+                                {!securityReady && (
+                                    <div className="rounded-xl border border-yellow-700/40 bg-yellow-900/20 px-5 py-4 text-sm text-yellow-300">
+                                        ⚠️ Escrow contract not deployed yet — set{' '}
+                                        <code className="font-mono text-yellow-200">VITE_ESCROW_ADDRESS</code> to enable security controls.
+                                    </div>
+                                )}
+
+                                {/* ── Global pause ── */}
+                                <div className="rounded-xl border border-yellow-900/30 bg-brand-navy/60 p-5">
+                                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                                        <div>
+                                            <h3 className="font-bold text-white text-base">Global Pause</h3>
+                                            <p className="text-xs text-gray-400 mt-1">
+                                                Halts all on-chain deposits, releases, and sweeps immediately.
+                                                Use during incidents or upgrades.
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-3 flex-shrink-0">
+                                            {pausedLoading ? (
+                                                <span className="text-xs text-gray-500">Loading…</span>
+                                            ) : (
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                                                    paused
+                                                        ? 'bg-red-900/30 text-red-400 border-red-700/40'
+                                                        : 'bg-green-900/20 text-green-400 border-green-700/40'
+                                                }`}>
+                                                    {paused ? '⏸ Paused' : '▶ Live'}
+                                                </span>
+                                            )}
+                                            <button
+                                                disabled={!securityReady || securityLoading === 'pause'}
+                                                onClick={async () => {
+                                                    setSecurityLoading('pause');
+                                                    try {
+                                                        if (paused) {
+                                                            await unpause();
+                                                            toast.success('Contract unpaused — operations resumed.');
+                                                        } else {
+                                                            await pause();
+                                                            toast.success('Contract paused — all operations halted.');
+                                                        }
+                                                        refetchPaused();
+                                                    } catch {
+                                                        toast.error('Transaction failed — make sure you are connected as the contract owner.');
+                                                    } finally {
+                                                        setSecurityLoading(null);
+                                                    }
+                                                }}
+                                                className={`px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-40 transition-colors border ${
+                                                    paused
+                                                        ? 'border-green-700/50 text-green-300 hover:bg-green-900/20'
+                                                        : 'border-red-700/50 text-red-300 hover:bg-red-900/20'
+                                                }`}
+                                            >
+                                                {securityLoading === 'pause' ? '…' : paused ? 'Unpause' : 'Pause Contract'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ── Blacklist wallet ── */}
+                                <div className="rounded-xl border border-yellow-900/30 bg-brand-navy/60 p-5">
+                                    <h3 className="font-bold text-white text-base mb-1">Blacklist Wallet</h3>
+                                    <p className="text-xs text-gray-400 mb-4">
+                                        Blocks an address from depositing new NFTs. Existing loans can still be swept by the admin.
+                                    </p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        <input
+                                            type="text"
+                                            placeholder="0x… wallet address"
+                                            value={blacklistInput}
+                                            onChange={e => setBlacklistInput(e.target.value)}
+                                            disabled={!securityReady}
+                                            className="flex-1 min-w-0 bg-brand-dark border border-yellow-900/40 rounded px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-1 focus:ring-red-500/50 disabled:opacity-40"
+                                        />
+                                        <button
+                                            disabled={!securityReady || !blacklistInput.startsWith('0x') || securityLoading === 'blacklist'}
+                                            onClick={async () => {
+                                                setSecurityLoading('blacklist');
+                                                try {
+                                                    await blacklist(blacklistInput.trim() as `0x${string}`);
+                                                    toast.success(`${blacklistInput.slice(0, 10)}… blacklisted.`);
+                                                    setBlacklistInput('');
+                                                } catch {
+                                                    toast.error('Blacklist failed — connected wallet must be the contract owner.');
+                                                } finally {
+                                                    setSecurityLoading(null);
+                                                }
+                                            }}
+                                            className="px-4 py-2 rounded-lg text-sm font-bold border border-red-700/50 text-red-300 hover:bg-red-900/20 disabled:opacity-40 transition-colors whitespace-nowrap"
+                                        >
+                                            {securityLoading === 'blacklist' ? '…' : 'Blacklist'}
+                                        </button>
+                                    </div>
+
+                                    {/* Unblacklist */}
+                                    <p className="text-xs text-gray-500 mt-4 mb-2">Remove from blacklist:</p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        <input
+                                            type="text"
+                                            placeholder="0x… wallet address"
+                                            value={unblacklistInput}
+                                            onChange={e => setUnblacklistInput(e.target.value)}
+                                            disabled={!securityReady}
+                                            className="flex-1 min-w-0 bg-brand-dark border border-yellow-900/40 rounded px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-1 focus:ring-green-500/50 disabled:opacity-40"
+                                        />
+                                        <button
+                                            disabled={!securityReady || !unblacklistInput.startsWith('0x') || securityLoading === 'unblacklist'}
+                                            onClick={async () => {
+                                                setSecurityLoading('unblacklist');
+                                                try {
+                                                    await unblacklist(unblacklistInput.trim() as `0x${string}`);
+                                                    toast.success(`${unblacklistInput.slice(0, 10)}… removed from blacklist.`);
+                                                    setUnblacklistInput('');
+                                                } catch {
+                                                    toast.error('Transaction failed — connected wallet must be the contract owner.');
+                                                } finally {
+                                                    setSecurityLoading(null);
+                                                }
+                                            }}
+                                            className="px-4 py-2 rounded-lg text-sm font-bold border border-green-700/50 text-green-300 hover:bg-green-900/20 disabled:opacity-40 transition-colors whitespace-nowrap"
+                                        >
+                                            {securityLoading === 'unblacklist' ? '…' : 'Unblacklist'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* ── Freeze / unfreeze loan ── */}
+                                <div className="rounded-xl border border-yellow-900/30 bg-brand-navy/60 p-5">
+                                    <h3 className="font-bold text-white text-base mb-1">Freeze Loan</h3>
+                                    <p className="text-xs text-gray-400 mb-4">
+                                        Locks a specific loan during an investigation — blocks both release and sweep until unfrozen.
+                                        Enter the numeric loan ID (stored in Firestore as <code className="font-mono">numericLoanId</code>).
+                                    </p>
+
+                                    {/* Freeze */}
+                                    <div className="flex gap-2 flex-wrap mb-4">
+                                        <input
+                                            type="text"
+                                            placeholder="Numeric loan ID (e.g. 123456789)"
+                                            value={freezeInput}
+                                            onChange={e => setFreezeInput(e.target.value)}
+                                            disabled={!securityReady}
+                                            className="flex-1 min-w-0 bg-brand-dark border border-yellow-900/40 rounded px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-1 focus:ring-red-500/50 disabled:opacity-40"
+                                        />
+                                        <button
+                                            disabled={!securityReady || !freezeInput.trim() || securityLoading === 'freeze'}
+                                            onClick={async () => {
+                                                setSecurityLoading('freeze');
+                                                try {
+                                                    await freezeLoan(BigInt(freezeInput.trim()));
+                                                    toast.success(`Loan ${freezeInput} frozen.`);
+                                                    setFreezeInput('');
+                                                } catch {
+                                                    toast.error('Freeze failed — check the loan ID and that you are the contract owner.');
+                                                } finally {
+                                                    setSecurityLoading(null);
+                                                }
+                                            }}
+                                            className="px-4 py-2 rounded-lg text-sm font-bold border border-red-700/50 text-red-300 hover:bg-red-900/20 disabled:opacity-40 transition-colors whitespace-nowrap"
+                                        >
+                                            {securityLoading === 'freeze' ? '…' : '🔒 Freeze'}
+                                        </button>
+                                    </div>
+
+                                    {/* Unfreeze */}
+                                    <p className="text-xs text-gray-500 mb-2">Unfreeze a loan (allow release / sweep again):</p>
+                                    <div className="flex gap-2 flex-wrap">
+                                        <input
+                                            type="text"
+                                            placeholder="Numeric loan ID"
+                                            value={unfreezeInput}
+                                            onChange={e => setUnfreezeInput(e.target.value)}
+                                            disabled={!securityReady}
+                                            className="flex-1 min-w-0 bg-brand-dark border border-yellow-900/40 rounded px-3 py-2 text-white text-sm font-mono focus:outline-none focus:ring-1 focus:ring-green-500/50 disabled:opacity-40"
+                                        />
+                                        <button
+                                            disabled={!securityReady || !unfreezeInput.trim() || securityLoading === 'unfreeze'}
+                                            onClick={async () => {
+                                                setSecurityLoading('unfreeze');
+                                                try {
+                                                    await unfreezeLoan(BigInt(unfreezeInput.trim()));
+                                                    toast.success(`Loan ${unfreezeInput} unfrozen.`);
+                                                    setUnfreezeInput('');
+                                                } catch {
+                                                    toast.error('Unfreeze failed — check the loan ID and that you are the contract owner.');
+                                                } finally {
+                                                    setSecurityLoading(null);
+                                                }
+                                            }}
+                                            className="px-4 py-2 rounded-lg text-sm font-bold border border-green-700/50 text-green-300 hover:bg-green-900/20 disabled:opacity-40 transition-colors whitespace-nowrap"
+                                        >
+                                            {securityLoading === 'unfreeze' ? '…' : '🔓 Unfreeze'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-gray-600 pb-4">
+                                    All actions require the connected wallet to be the escrow contract owner and will prompt a MetaMask signature.
+                                </p>
+                            </div>
+                        )}
+
                     </motion.div>
                 </AnimatePresence>
             </main>

@@ -1,4 +1,4 @@
-import { useWriteContract, usePublicClient, useReadContracts } from 'wagmi';
+import { useWriteContract, usePublicClient, useReadContracts, useReadContract } from 'wagmi';
 import { ESCROW_ABI, ERC721_MINIMAL_ABI, ESCROW_ADDRESS, TIER, type TierValue } from '../services/escrowService';
 
 // ── Tier + reward preview (read-only, called before depositing) ───────────────
@@ -124,6 +124,56 @@ export function useEscrowDeposit() {
   };
 
   return { approveAndDeposit, escrowReady: !!ESCROW_ADDRESS };
+}
+
+// ── Security hook: pause, blacklist, freeze ───────────────────────────────────
+
+/**
+ * Provides the global-pause state and all security write operations exposed
+ * by DigiPawnsEscrow v2 (pause/unpause, blacklist, freezeLoan/unfreezeLoan).
+ * All writes require the connected wallet to be the contract owner.
+ */
+export function useEscrowSecurity() {
+  const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
+  const enabled = !!ESCROW_ADDRESS;
+  const addr = ESCROW_ADDRESS as `0x${string}`;
+
+  // Live paused() state — refetches every 10 s so the badge stays fresh.
+  const { data: paused, refetch: refetchPaused, isLoading: pausedLoading } = useReadContract({
+    address: addr,
+    abi: ESCROW_ABI,
+    functionName: 'paused',
+    query: { enabled, refetchInterval: 10_000 },
+  });
+
+  const writeAndWait = async (
+    functionName: 'pause' | 'unpause' | 'blacklist' | 'unblacklist' | 'freezeLoan' | 'unfreezeLoan',
+    args: readonly unknown[] = []
+  ): Promise<void> => {
+    if (!ESCROW_ADDRESS) throw new Error('Escrow contract not deployed yet.');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tx = await (writeContractAsync as any)({
+      address: addr,
+      abi: ESCROW_ABI,
+      functionName,
+      args,
+    }) as `0x${string}`;
+    await publicClient!.waitForTransactionReceipt({ hash: tx });
+  };
+
+  return {
+    paused: paused as boolean | undefined,
+    pausedLoading,
+    refetchPaused,
+    pause:       ()                        => writeAndWait('pause'),
+    unpause:     ()                        => writeAndWait('unpause'),
+    blacklist:   (account: `0x${string}`)  => writeAndWait('blacklist',   [account]),
+    unblacklist: (account: `0x${string}`)  => writeAndWait('unblacklist', [account]),
+    freezeLoan:  (loanId: bigint)          => writeAndWait('freezeLoan',  [loanId]),
+    unfreezeLoan:(loanId: bigint)          => writeAndWait('unfreezeLoan',[loanId]),
+    escrowReady: !!ESCROW_ADDRESS,
+  };
 }
 
 // ── Admin hook: release or sweep from escrow ──────────────────────────────────
