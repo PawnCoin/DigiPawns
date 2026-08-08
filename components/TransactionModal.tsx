@@ -124,7 +124,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         if (isOpen) { setStep('initial'); setErrorMessage(''); setDepositTxHash(null); }
     }, [isOpen]);
 
-    const buildLoan = useCallback((): Loan => ({
+    const buildLoan = useCallback((txHash?: string | null): Loan => ({
         id: `LN${Math.floor(Math.random() * 10000)}`,
         nft: { ...nftDetails, imageUrl: '/placeholder-generic.png' },
         contractAddress: contractAddress || '',
@@ -136,6 +136,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         repaymentAmount: loanTerms.repaymentAmount,
         status: 'Active',
         nftTransferStatus: useOnChain ? 'received' : 'awaiting_transfer',
+        ...(txHash ? { depositTxHash: txHash } : {}),
     }), [nftDetails, contractAddress, tokenId, numericLoanId, appraisal, loanTerms, useOnChain]);
 
     const handleStartTransaction = async () => {
@@ -151,6 +152,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                     }
                 );
                 setDepositTxHash(result.depositTxHash);
+                onSuccess(buildLoan(result.depositTxHash));
             } else {
                 // ── Simulated flow (no escrow deployed / no NFT data) ────────
                 setStep('approving');
@@ -160,8 +162,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                 }
                 setStep('depositing');
                 await new Promise(res => setTimeout(res, 2200));
+                onSuccess(buildLoan());
             }
-            onSuccess(buildLoan());
             setStep('success');
         } catch (err: unknown) {
             setErrorMessage(

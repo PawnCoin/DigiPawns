@@ -102,6 +102,19 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, repayLoan, liquidateLoan }) =
              </div>
           )}
 
+          {/* Deposit transaction link */}
+          {loan.depositTxHash && (
+            <a
+              href={`https://basescan.org/tx/${loan.depositTxHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center gap-1.5 text-xs text-brand-gold hover:text-brand-gold-light underline underline-offset-2 transition-colors"
+            >
+              <span className="w-2 h-2 bg-green-400 rounded-full inline-block flex-shrink-0" />
+              View deposit on Basescan ↗
+            </a>
+          )}
+
           {/* NFT Transfer Status */}
           {loan.nftTransferStatus && (
             <div className={`mt-4 px-3 py-2 rounded-lg border text-xs font-semibold flex items-center gap-2 ${

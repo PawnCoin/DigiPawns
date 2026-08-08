@@ -325,6 +325,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
                 nftTransferStatus: loan.nftTransferStatus || 'awaiting_transfer',
                 // Store the on-chain loanId so admin can call releaseToOwner / sweepToShop
                 ...(loan.numericLoanId ? { numericLoanId: loan.numericLoanId } : {}),
+                // Store the deposit tx hash so the borrower dashboard can link to Basescan
+                ...(loan.depositTxHash ? { depositTxHash: loan.depositTxHash } : {}),
                 createdAt: new Date().toISOString(),
             };
             await setDoc(doc(collection(db, 'loans')), newLoan);

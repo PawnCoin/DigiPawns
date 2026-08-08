@@ -43,6 +43,8 @@ export interface Loan {
   repaymentToken?: string;
   /** Discount percentage applied at repayment (e.g. 0.25 for DIG). */
   repaymentDiscountPct?: number;
+  /** On-chain tx hash from the escrow deposit (Base Mainnet). Used to link to Basescan. */
+  depositTxHash?: string;
 }
 
 export interface UserProfile {
