@@ -1,12 +1,12 @@
 import type { Nft } from '../types';
 
 // Alchemy network identifiers for each supported EVM chain.
-export type AlchemyNetwork = 'eth-mainnet' | 'polygon-mainnet' | 'base-sepolia';
+export type AlchemyNetwork = 'eth-mainnet' | 'polygon-mainnet' | 'base-mainnet';
 
 export const CHAIN_TO_ALCHEMY_NETWORK: Record<number, AlchemyNetwork> = {
-    1:     'eth-mainnet',
-    137:   'polygon-mainnet',
-    84532: 'base-sepolia',
+    1:    'eth-mainnet',
+    137:  'polygon-mainnet',
+    8453: 'base-mainnet',
 };
 
 interface AlchemyNftImage {
@@ -240,12 +240,12 @@ export async function fetchSolanaNftsFromWallet(walletAddress: string): Promise<
 
 /**
  * Fetch NFTs for a wallet address across all specified Alchemy networks.
- * Defaults to all three supported EVM networks (Ethereum, Polygon, Base Sepolia).
+ * Defaults to all three supported EVM networks (Ethereum, Polygon, Base Mainnet).
  * Results are merged and de-duplicated by contract+tokenId.
  */
 export const fetchNftsForWallet = async (
     walletAddress: string,
-    networks: AlchemyNetwork[] = ['eth-mainnet', 'polygon-mainnet', 'base-sepolia'],
+    networks: AlchemyNetwork[] = ['eth-mainnet', 'polygon-mainnet', 'base-mainnet'],
 ): Promise<Nft[]> => {
     const apiKey = process.env.ALCHEMY_API_KEY;
 

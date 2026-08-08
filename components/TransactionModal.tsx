@@ -5,7 +5,7 @@ import { WalletIcon, CheckCircleIcon, ErrorIcon } from './IconComponents';
 import { useEscrowDeposit, useEscrowTierPreview, type DepositStep } from '../hooks/useEscrow';
 import { ESCROW_ADDRESS, TIER } from '../services/escrowService';
 import { useChainId, useAccount, useSwitchChain } from 'wagmi';
-import { baseSepolia } from 'wagmi/chains';
+import { base } from 'wagmi/chains';
 
 interface TransactionModalProps {
     isOpen: boolean;
@@ -109,10 +109,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     const { isConnected: isEvmConnected, address: evmAddress } = useAccount();
     const { switchChainAsync } = useSwitchChain();
     const tierPreview = useEscrowTierPreview(evmAddress);
-    const isOnBaseSepolia = chainId === baseSepolia.id;
-    const showNetworkWarning = isEvmConnected && !isOnBaseSepolia;
-    const switchToBaseSepolia = async () => {
-        try { await switchChainAsync({ chainId: baseSepolia.id }); }
+    const isOnBase = chainId === base.id;
+    const showNetworkWarning = isEvmConnected && !isOnBase;
+    const switchToBase = async () => {
+        try { await switchChainAsync({ chainId: base.id }); }
         catch { /* user cancelled or wallet rejected */ }
     };
 
@@ -178,10 +178,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                         {showNetworkWarning && (
                             <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-700/50 bg-red-900/20 px-4 py-3">
                                 <p className="text-xs text-red-300 font-medium">
-                                    ⚠ Switch to Base Sepolia to deposit your NFT into escrow.
+                                    ⚠ Switch to Base Mainnet to deposit your NFT into escrow.
                                 </p>
                                 <button
-                                    onClick={switchToBaseSepolia}
+                                    onClick={switchToBase}
                                     className="flex-shrink-0 text-xs font-bold text-red-200 border border-red-700/60 rounded-lg px-2.5 py-1 hover:bg-red-900/40 transition-colors"
                                 >
                                     Switch
@@ -269,7 +269,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                                 : 'Please approve the transaction in your wallet.'}
                         </p>
                         {useOnChain && (
-                            <p className="mt-3 text-xs text-gray-500">Waiting for confirmation on Base Sepolia…</p>
+                            <p className="mt-3 text-xs text-gray-500">Waiting for confirmation on Base Mainnet…</p>
                         )}
                     </div>
                 );
@@ -287,7 +287,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                                 : 'Waiting for blockchain confirmation. Your funds will be disbursed shortly.'}
                         </p>
                         {useOnChain && (
-                            <p className="mt-3 text-xs text-gray-500">Waiting for confirmation on Base Sepolia…</p>
+                            <p className="mt-3 text-xs text-gray-500">Waiting for confirmation on Base Mainnet…</p>
                         )}
                     </div>
                 );

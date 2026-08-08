@@ -50,6 +50,7 @@ Escrows ERC-721 NFT collateral for loans.
 npm run compile          # compile all Solidity
 npm test                 # 33 tests, all passing
 npm run deploy:local     # deploy to local hardhat node
+npm run deploy:base         # deploy to Base Mainnet (production)
 npm run deploy:baseSepolia  # deploy to Base Sepolia testnet
 ```
 
@@ -57,14 +58,15 @@ npm run deploy:baseSepolia  # deploy to Base Sepolia testnet
 Copy `contracts/.env.example` → `contracts/.env` and fill in:
 - `DEPLOYER_PRIVATE_KEY` — deployer wallet private key
 - `SHOP_ADDRESS` — wallet that receives defaulted NFT collateral
-- `BASE_SEPOLIA_RPC_URL` — defaults to `https://sepolia.base.org`
+- `BASE_MAINNET_RPC_URL` — defaults to `https://mainnet.base.org`
+- `BASE_SEPOLIA_RPC_URL` — defaults to `https://sepolia.base.org` (testnet only)
 - `BASESCAN_API_KEY` — optional, for contract verification on Basescan
 
 After deployment, the script prints the deployed address and a `npx hardhat verify` command. Add `VITE_ESCROW_ADDRESS=<deployed>` to Replit Secrets so the frontend can call the contract.
 
 ## Browse Wallet / Multi-chain NFT lookup
 The Portfolio tab in the Dashboard has two sub-tabs:
-- **My Portfolio** — shows NFTs in the connected Base Sepolia testnet wallet (via Alchemy).
+- **My Portfolio** — shows NFTs in the connected Base Mainnet wallet (via Alchemy).
 - **Browse Wallet** — lets anyone paste a wallet address, ENS name (e.g. `vitalik.eth`), or OpenSea username and fetch their NFTs across Ethereum, Base, Polygon, Arbitrum, and Optimism mainnet via Alchemy, plus Solana and all chains via OpenSea.
 
 Each imported NFT card has:
@@ -79,7 +81,7 @@ Each imported NFT card has:
 
 ### Relevant files
 - `services/openSeaService.ts` — OpenSea API v2, Alchemy multi-chain, ENS resolution
-- `services/nftService.ts` — existing Base Sepolia Alchemy fetch (unchanged)
+- `services/nftService.ts` — Base Mainnet + multi-chain Alchemy fetch
 - `components/SettingsView.tsx` — Portfolio + Browse Wallet UI
 - `components/BrowseSellModal.tsx` — pre-filled Sell to Shop modal
 

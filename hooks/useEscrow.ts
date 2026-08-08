@@ -1,6 +1,34 @@
 import { useWriteContract, usePublicClient, useReadContracts, useReadContract } from 'wagmi';
 import { ESCROW_ABI, ERC721_MINIMAL_ABI, ESCROW_ADDRESS, TIER, type TierValue } from '../services/escrowService';
 
+// ── Runtime contract-existence check ─────────────────────────────────────────
+
+/**
+ * Reads `shopAddress()` on the escrow contract to confirm it is actually
+ * deployed and initialized on the current chain. Returns { deployed, isChecking }.
+ *
+ * This prevents the UI from treating a plausible-but-empty address (one that
+ * passes the format guard in escrowService) as live — e.g. a mistyped address
+ * or a deployment that only exists on a different network.
+ *
+ * The check is skipped (deployed = false) when ESCROW_ADDRESS is empty.
+ */
+export function useEscrowDeployed(): { deployed: boolean; isChecking: boolean } {
+  const enabled = !!ESCROW_ADDRESS;
+  const { data: shopAddr, isLoading } = useReadContract({
+    address: ESCROW_ADDRESS as `0x${string}`,
+    abi: ESCROW_ABI,
+    functionName: 'shopAddress',
+    query: { enabled, retry: false },
+  });
+
+  if (!enabled) return { deployed: false, isChecking: false };
+
+  // shopAddress returns a non-zero address only if the contract is deployed and initialized
+  const deployed = !!shopAddr && shopAddr !== '0x0000000000000000000000000000000000000000';
+  return { deployed, isChecking: isLoading };
+}
+
 // ── Tier + reward preview (read-only, called before depositing) ───────────────
 
 export interface TierPreview {
@@ -80,6 +108,7 @@ export type DepositStep = 'approving' | 'depositing';
 export function useEscrowDeposit() {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
+  const { deployed: contractDeployed } = useEscrowDeployed();
 
   /**
    * Approve the escrow contract for the NFT, then deposit it.
@@ -96,6 +125,12 @@ export function useEscrowDeposit() {
     onStep?: (step: DepositStep) => void
   ): Promise<`0x${string}`> => {
     if (!ESCROW_ADDRESS) throw new Error('Escrow contract not deployed yet.');
+    // Runtime guard: verify the contract actually exists on-chain before
+    // letting the user sign an approval against a potentially undeployed address.
+    const code = await publicClient!.getCode({ address: ESCROW_ADDRESS as `0x${string}` });
+    if (!code || code === '0x') {
+      throw new Error('Escrow contract not found on this network. Please connect to Base Mainnet.');
+    }
     const escrowAddr = ESCROW_ADDRESS as `0x${string}`;
 
     // 1. Approve escrow to transfer the NFT
@@ -123,7 +158,9 @@ export function useEscrowDeposit() {
     return depositTx;
   };
 
-  return { approveAndDeposit, escrowReady: !!ESCROW_ADDRESS };
+  // escrowReady is only true when the address passes the format guard AND the
+  // contract is confirmed deployed on the current chain.
+  return { approveAndDeposit, escrowReady: !!ESCROW_ADDRESS && contractDeployed };
 }
 
 // ── Security hook: pause, blacklist, freeze ───────────────────────────────────

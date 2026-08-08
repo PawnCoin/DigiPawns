@@ -10,7 +10,7 @@ import { useAppContext } from '../contexts/AppContext';
 const NETWORK_OPTIONS: { label: string; value: AlchemyNetwork }[] = [
     { label: 'Ethereum', value: 'eth-mainnet' },
     { label: 'Polygon', value: 'polygon-mainnet' },
-    { label: 'Base', value: 'base-sepolia' },
+    { label: 'Base', value: 'base-mainnet' },
 ];
 
 const PawnForm: React.FC = () => {

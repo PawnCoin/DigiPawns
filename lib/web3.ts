@@ -1,25 +1,25 @@
 import { http, createConfig } from 'wagmi';
-import { mainnet, polygon, baseSepolia } from 'wagmi/chains';
+import { mainnet, polygon, base } from 'wagmi/chains';
 import { injected, walletConnect, coinbaseWallet } from 'wagmi/connectors';
 
 // DigiPawns supports three EVM chains:
 //  - Ethereum mainnet  (chain 1)   — $DIG and $PC (ERC-20) live here
 //  - Polygon mainnet   (chain 137) — $DIG also available here
-//  - Base Sepolia      (chain 84532) — testnet for the escrow contract
+//  - Base Mainnet      (chain 8453) — DigiPawnsEscrow contract lives here
 //
 // Solana is handled by a separate provider stack (ConnectionProvider +
 // WalletProvider from @solana/wallet-adapter-react) — see index.tsx.
 
 const walletConnectProjectId = process.env.WALLETCONNECT_PROJECT_ID;
 
-export const SUPPORTED_EVM_CHAINS = [mainnet, polygon, baseSepolia] as const;
+export const SUPPORTED_EVM_CHAINS = [mainnet, polygon, base] as const;
 export const SUPPORTED_EVM_CHAIN_IDS = SUPPORTED_EVM_CHAINS.map(c => c.id);
 
-/** Base Sepolia stays as the deployment target for DigiPawnsEscrow contract. */
-export const TARGET_CHAIN = baseSepolia;
+/** Base Mainnet — deployment chain for DigiPawnsEscrow contract. */
+export const TARGET_CHAIN = base;
 
 export const wagmiConfig = createConfig({
-  chains: [mainnet, polygon, baseSepolia],
+  chains: [mainnet, polygon, base],
   connectors: [
     injected(),
     coinbaseWallet({ appName: 'DigiPawns' }),
@@ -28,9 +28,9 @@ export const wagmiConfig = createConfig({
       : []),
   ],
   transports: {
-    [mainnet.id]:    http(),   // Ethereum mainnet — public RPC
-    [polygon.id]:   http(),   // Polygon mainnet  — public RPC
-    [baseSepolia.id]: http('https://sepolia.base.org'),
+    [mainnet.id]: http(),   // Ethereum mainnet — public RPC
+    [polygon.id]: http(),   // Polygon mainnet  — public RPC
+    [base.id]:    http(),   // Base Mainnet     — public RPC
   },
 });
 

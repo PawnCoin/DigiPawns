@@ -9,9 +9,9 @@ description: How EVM (wagmi v2) and Solana wallet adapter run side-by-side; know
 - Order in index.tsx: WagmiProvider > QueryClientProvider > ConnectionProvider > WalletProvider > App
 
 ## Chain IDs in wagmiConfig
-- mainnet (1), polygon (137), baseSepolia (84532) — all three must be in `wagmiConfig.chains`
+- mainnet (1), polygon (137), base (8453) — all three must be in `wagmiConfig.chains`
 - `SUPPORTED_EVM_CHAIN_IDS.includes(chainId)` cast needed: `(list as readonly number[]).includes(chainId)`
-- `TARGET_CHAIN = baseSepolia` stays for escrow contract compatibility; `isCorrectChain` now checks ALL three
+- `TARGET_CHAIN = base` (Base Mainnet, chain 8453) for escrow contract; `isCorrectChain` checks ALL three
 
 ## Solana wallet adapter quirks
 - `useWallet().select(name)` is synchronous and triggers state update; `connect()` is called in a useEffect watching `wallet?.adapter.name`

@@ -46,13 +46,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const [watchedWallets, setWatchedWallets] = useState<WatchedWallet[]>([]);
     const [isWalletPickerOpen, setIsWalletPickerOpen] = useState(false);
 
-    // ── EVM wallet (wagmi — Ethereum, Polygon, Base Sepolia) ────────────────────
+    // ── EVM wallet (wagmi — Ethereum, Polygon, Base Mainnet) ────────────────────
     const { address: chainAddress, isConnected: isWalletConnected, connector: activeConnector } = useAccount();
     const { connectAsync, connectors, isPending: isConnectingWallet } = useConnect();
     const { disconnect: disconnectChainWallet } = useDisconnect();
     const chainId = useChainId();
     const { switchChainAsync } = useSwitchChain();
-    // "Correct" chain = any chain DigiPawns actively supports (ETH, Polygon, Base Sepolia)
+    // "Correct" chain = any chain DigiPawns actively supports (ETH, Polygon, Base Mainnet)
     const isCorrectChain = isWalletConnected && (SUPPORTED_EVM_CHAIN_IDS as readonly number[]).includes(chainId);
     const connectedEvmChain = SUPPORTED_EVM_CHAINS.find(c => c.id === chainId);
     const chainName = connectedEvmChain?.name ?? 'Unknown Network';
@@ -629,7 +629,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             // Default to Ethereum mainnet for unsupported-chain users.
             await switchChainAsync({ chainId: SUPPORTED_EVM_CHAINS[0].id });
         } catch {
-            toast.error('Please switch to Ethereum, Polygon, or Base Sepolia manually.');
+            toast.error('Please switch to Ethereum, Polygon, or Base manually.');
         }
     }, [switchChainAsync]);
 

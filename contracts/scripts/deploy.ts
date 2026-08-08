@@ -14,16 +14,21 @@ import { ethers } from "hardhat";
  *   SHOP_ADDRESS          — wallet that receives defaulted NFT collateral
  *
  * Optional:
- *   BASE_SEPOLIA_RPC_URL  — defaults to https://sepolia.base.org
+ *   BASE_MAINNET_RPC_URL  — defaults to https://mainnet.base.org
+ *   BASE_SEPOLIA_RPC_URL  — defaults to https://sepolia.base.org (testnet)
  *   BASESCAN_API_KEY      — needed only for post-deploy contract verification
  *   APPROVED_COLLECTIONS  — comma-separated ERC-721 contract addresses to
  *                           approve on the allowlist immediately after deploy
  *
- * Usage:
+ * Usage (mainnet):
+ *   npm run deploy:base
+ *
+ * Usage (testnet):
  *   npm run deploy:baseSepolia
  *
  * To verify the implementation on Basescan (NOT the proxy):
- *   npx hardhat verify --network baseSepolia <IMPL_ADDRESS>
+ *   npx hardhat verify --network base <IMPL_ADDRESS>          # mainnet
+ *   npx hardhat verify --network baseSepolia <IMPL_ADDRESS>   # testnet
  * Then verify the proxy through Basescan's "Is this a Proxy?" UI.
  */
 async function main() {
@@ -37,6 +42,7 @@ async function main() {
 
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
+  const networkArg = network.chainId === 8453n ? "base" : "baseSepolia";
 
   console.log("────────────────────────────────────────────────────────");
   console.log("DigiPawns Escrow v2 — UUPS proxy deployment");
@@ -107,7 +113,7 @@ async function main() {
   console.log("\n1. Add to Replit Secrets (use the PROXY address — never the impl):");
   console.log(`   VITE_ESCROW_ADDRESS=${proxyAddress}`);
   console.log("\n2. Verify the implementation on Basescan:");
-  console.log(`   npx hardhat verify --network baseSepolia ${implAddress}`);
+  console.log(`   npx hardhat verify --network ${networkArg} ${implAddress}`);
   console.log(`   Then mark the proxy as a proxy at: https://basescan.org/address/${proxyAddress}`);
   console.log("\n3. Set $DIG/$PC token tier config (in Remix or via script):");
   console.log(`   escrow.setTokenTierConfig(digTokenAddress, digThreshold, pcTokenAddress, pcThreshold)`);

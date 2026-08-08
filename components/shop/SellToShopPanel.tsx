@@ -12,7 +12,7 @@ const SHOP_BUY_MULTIPLIER = 0.6;
 const NETWORK_OPTIONS: { label: string; value: AlchemyNetwork }[] = [
     { label: 'Ethereum', value: 'eth-mainnet' },
     { label: 'Polygon', value: 'polygon-mainnet' },
-    { label: 'Base', value: 'base-sepolia' },
+    { label: 'Base', value: 'base-mainnet' },
 ];
 
 const SellToShopPanel: React.FC = () => {

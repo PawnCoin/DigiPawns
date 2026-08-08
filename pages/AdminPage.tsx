@@ -20,12 +20,12 @@ const isSuspectImageUrl = (url: string) =>
 
 const LOAN_STATUSES = ['Active', 'Repaid', 'Defaulted', 'Liquidated'];
 const TRANSFER_STATUSES = ['awaiting_transfer', 'received', 'active', 'returned', 'liquidated'];
-const NFT_CHAINS = ['Ethereum', 'Base Sepolia', 'Polygon', 'Solana', 'BNB Chain', 'Avalanche'];
+const NFT_CHAINS = ['Ethereum', 'Base', 'Polygon', 'Solana', 'BNB Chain', 'Avalanche'];
 
 const ALCHEMY_CHAIN_LABEL: Record<string, string> = {
     'eth-mainnet':     'Ethereum',
     'polygon-mainnet': 'Polygon',
-    'base-sepolia':    'Base Sepolia',
+    'base-mainnet':    'Base',
     'solana-mainnet':  'Solana',
 };
 
@@ -34,7 +34,6 @@ const ALCHEMY_NETWORK_BADGE: Record<string, { badge: string; color: string }> = 
     'eth-mainnet':     { badge: 'ETH',  color: 'text-blue-300' },
     'polygon-mainnet': { badge: 'MATIC', color: 'text-purple-300' },
     'base-mainnet':    { badge: 'BASE',  color: 'text-indigo-300' },
-    'base-sepolia':    { badge: 'BASE',  color: 'text-indigo-300' },
     'solana-mainnet':  { badge: 'SOL',   color: 'text-green-300' },
     'arb-mainnet':     { badge: 'ARB',   color: 'text-sky-300' },
     'opt-mainnet':     { badge: 'OP',    color: 'text-red-300' },
@@ -224,7 +223,7 @@ const AdminPage: React.FC = () => {
             } else if (addr.startsWith('0x')) {
                 // EVM hex address — scan all three supported EVM networks.
                 nfts = await fetchNftsForWallet(addr);
-                if (nfts.length === 0) setPickerError('No NFTs found for this address on Ethereum, Polygon, or Base Sepolia.');
+                if (nfts.length === 0) setPickerError('No NFTs found for this address on Ethereum, Polygon, or Base.');
             } else {
                 setPickerError('Unrecognised address format. Enter an EVM address (0x…) or a Solana address (base58).');
                 setPickerLoading(false);

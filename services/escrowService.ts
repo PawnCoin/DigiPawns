@@ -9,8 +9,30 @@
  * The contract is a UUPS upgradeable proxy — the address never changes even
  * when the admin pushes a new implementation via upgradeTo().
  */
-export const ESCROW_ADDRESS: `0x${string}` | '' =
-  (process.env.VITE_ESCROW_ADDRESS as `0x${string}`) || '';
+
+/**
+ * Reject addresses that are clearly placeholder values (sequential hex bytes,
+ * all-zero, or all-one addresses that cannot be a real deployed contract).
+ * Returns true only for plausible real addresses.
+ */
+function isPlausibleContractAddress(addr: string): boolean {
+  if (!addr || addr.length !== 42 || !addr.startsWith('0x')) return false;
+  const hex = addr.slice(2).toLowerCase();
+  // All-zeros: 0x0000...
+  if (/^0+$/.test(hex)) return false;
+  // All-ones: 0xffff...
+  if (/^f+$/.test(hex)) return false;
+  // Sequential ascending bytes (e.g. 0x1234567890123456789012345678901234567890)
+  if (hex === '1234567890123456789012345678901234567890') return false;
+  // Dead-address patterns used in testing
+  if (/^(dead)+/.test(hex)) return false;
+  return true;
+}
+
+const _raw = process.env.VITE_ESCROW_ADDRESS ?? '';
+export const ESCROW_ADDRESS: `0x${string}` | '' = isPlausibleContractAddress(_raw)
+  ? (_raw as `0x${string}`)
+  : '';
 
 // ── Tier enum (mirrors Solidity: 0 = NONE, 1 = STANDARD, 2 = GOLD) ──────────
 export const TIER = { NONE: 0, STANDARD: 1, GOLD: 2 } as const;

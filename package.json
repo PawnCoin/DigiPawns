@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@bonfida/spl-name-service": "^3.0.26",
-    "@ffmpeg/ffmpeg": "^0.12.10",
-    "@ffmpeg/util": "^0.12.1",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@google/genai": "^1.22.0",
     "@solana/spl-token": "^0.4.15",
     "@solana/wallet-adapter-backpack": "^0.1.14",

@@ -26,7 +26,6 @@ const ALCHEMY_NETWORK_BADGE: Record<string, { badge: string; color: string }> = 
     'eth-mainnet':     { badge: 'ETH',  color: 'text-blue-300' },
     'polygon-mainnet': { badge: 'MATIC', color: 'text-purple-300' },
     'base-mainnet':    { badge: 'BASE',  color: 'text-indigo-300' },
-    'base-sepolia':    { badge: 'BASE',  color: 'text-indigo-300' },
     'solana-mainnet':  { badge: 'SOL',   color: 'text-green-300' },
     'arb-mainnet':     { badge: 'ARB',   color: 'text-sky-300' },
     'opt-mainnet':     { badge: 'OP',    color: 'text-red-300' },
@@ -312,7 +311,7 @@ const SettingsView: React.FC = () => {
         if (portfolio.nfts.length === 0) {
             return (
                 <div className="text-center py-16 bg-brand-navy rounded-lg border border-dashed border-yellow-900/40">
-                    <p className="text-gray-400">No NFTs found on Base Sepolia testnet for this wallet.</p>
+                    <p className="text-gray-400">No NFTs found on Base Mainnet for this wallet.</p>
                 </div>
             );
         }

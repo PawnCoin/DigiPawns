@@ -9,6 +9,7 @@
     "coverage": "hardhat coverage",
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "deploy:base": "hardhat run scripts/deploy.ts --network base",
     "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia"
   },
   "devDependencies": {

@@ -8,6 +8,8 @@ dotenv.config();
 // For deployment, set DEPLOYER_PRIVATE_KEY in Replit Secrets (with or without 0x prefix).
 const rawKey = process.env.DEPLOYER_PRIVATE_KEY ?? "0".repeat(64);
 const PRIVATE_KEY = rawKey.startsWith("0x") ? rawKey : `0x${rawKey}`;
+const BASE_MAINNET_RPC =
+  process.env.BASE_MAINNET_RPC_URL ?? "https://mainnet.base.org";
 const BASE_SEPOLIA_RPC =
   process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org";
 const BASESCAN_API_KEY = process.env.BASESCAN_API_KEY ?? "";
@@ -25,6 +27,13 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://127.0.0.1:8545",
     },
+    // Base Mainnet — production deployment target
+    base: {
+      url: BASE_MAINNET_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 8453,
+    },
+    // Base Sepolia — kept for testnet use / future re-deploys
     baseSepolia: {
       url: BASE_SEPOLIA_RPC,
       accounts: [PRIVATE_KEY],
@@ -33,9 +42,18 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
+      base: BASESCAN_API_KEY,
       "base-sepolia": BASESCAN_API_KEY,
     },
     customChains: [
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
       {
         network: "base-sepolia",
         chainId: 84532,

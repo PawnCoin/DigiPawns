@@ -203,7 +203,7 @@ const WalletPickerModal: React.FC<WalletPickerModalProps> = ({ onClose }) => {
                                 </div>
                             );
                         })}
-                        <p className="text-xs text-gray-600 pt-1">Supports Ethereum, Polygon, and Base Sepolia.</p>
+                        <p className="text-xs text-gray-600 pt-1">Supports Ethereum, Polygon, and Base.</p>
                     </div>
                 )}
 
