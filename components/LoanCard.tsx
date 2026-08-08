@@ -90,6 +90,19 @@ const LoanCard: React.FC<LoanCardProps> = ({ loan, repayLoan, liquidateLoan }) =
              </div>
           )}
 
+          {/* Repayment transaction link */}
+          {loan.status === 'Repaid' && loan.repaymentTxHash && (
+            <a
+              href={`https://basescan.org/tx/${loan.repaymentTxHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center gap-1.5 text-xs text-brand-gold hover:text-brand-gold-light underline underline-offset-2 transition-colors"
+            >
+              <span className="w-2 h-2 bg-green-400 rounded-full inline-block flex-shrink-0" />
+              View repayment on Basescan ↗
+            </a>
+          )}
+
            {loan.status === 'Defaulted' && (
              <div className="mt-6 text-center text-sm text-red-300/80">
                Loan defaulted on {format(new Date(loan.dueDate), 'MMM d, yyyy')}
