@@ -303,3 +303,62 @@ export const ESCROW_ABI = [
     outputs: [{ name: '', type: 'address' }],
   },
 ] as const;
+
+// ── Human-readable error parser ───────────────────────────────────────────────
+
+/**
+ * Converts a raw contract revert or wallet-rejection error into a short,
+ * plain-English message suitable for the UI.  Falls back to the original
+ * message (truncated) when no known pattern is matched.
+ *
+ * Add new entries here as new revert strings are discovered from the contract.
+ */
+export function parseEscrowError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const lower = raw.toLowerCase();
+
+  // ── Contract state ────────────────────────────────────────────────────────
+  if (lower.includes('enforcedpause') || lower.includes('pausable: paused') ||
+      (lower.includes('paused') && !lower.includes('not paused')))
+    return 'The escrow contract is currently paused. Please try again later.';
+
+  if (lower.includes('loan is frozen') || lower.includes('frozen'))
+    return 'This loan is frozen and cannot be modified right now.';
+
+  if (lower.includes('loan already') || lower.includes('already deposited') || lower.includes('loan exists'))
+    return 'This loan ID is already in use. Please refresh and try again.';
+
+  if (lower.includes('collection not approved') || lower.includes('not an approved collection'))
+    return 'This NFT collection has not been approved for use as collateral.';
+
+  if (lower.includes('blacklisted'))
+    return 'Your wallet address has been restricted from using the escrow.';
+
+  // ── Ownership / permissions ───────────────────────────────────────────────
+  if (lower.includes('ownable: caller is not the owner') || lower.includes('caller is not the owner'))
+    return 'Only the contract owner can perform this action.';
+
+  if (lower.includes('transfer caller is not owner') || lower.includes('caller is not token owner') ||
+      lower.includes('not owner nor approved'))
+    return 'Your wallet does not own this NFT or the approval was not granted.';
+
+  // ── Network / contract not found ──────────────────────────────────────────
+  if (lower.includes('not found on this network') || lower.includes('chain mismatch'))
+    return 'Wrong network — please switch to Base Mainnet and try again.';
+
+  // ── Wallet rejection ──────────────────────────────────────────────────────
+  if (lower.includes('user rejected') || lower.includes('user denied') ||
+      lower.includes('rejected the request') || lower.includes('cancelled'))
+    return 'You cancelled the transaction in your wallet.';
+
+  // ── Gas / balance ─────────────────────────────────────────────────────────
+  if (lower.includes('insufficient funds') || lower.includes('insufficient balance'))
+    return 'Insufficient funds to cover network gas fees.';
+
+  // ── Generic revert ────────────────────────────────────────────────────────
+  if (lower.includes('execution reverted') || lower.includes('reverted'))
+    return 'The transaction was rejected by the contract. Please check your inputs and try again.';
+
+  // Truncate unexpectedly long messages so they don't overflow the UI.
+  return raw.length > 200 ? raw.slice(0, 200) + '…' : raw;
+}

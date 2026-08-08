@@ -1,5 +1,5 @@
 import { useWriteContract, usePublicClient, useReadContracts, useReadContract } from 'wagmi';
-import { ESCROW_ABI, ERC721_MINIMAL_ABI, ESCROW_ADDRESS, TIER, type TierValue } from '../services/escrowService';
+import { ESCROW_ABI, ERC721_MINIMAL_ABI, ESCROW_ADDRESS, TIER, type TierValue, parseEscrowError } from '../services/escrowService';
 
 // ── Runtime contract-existence check ─────────────────────────────────────────
 
@@ -105,6 +105,14 @@ export function useEscrowTierPreview(userAddress?: `0x${string}`): TierPreview {
 
 export type DepositStep = 'approving' | 'depositing';
 
+/** Both transaction hashes returned from a successful approveAndDeposit call. */
+export interface DepositResult {
+  /** Hash of the ERC-721 approve() transaction. */
+  approveTxHash: `0x${string}`;
+  /** Hash of the depositNFT() transaction — the canonical escrow receipt. */
+  depositTxHash: `0x${string}`;
+}
+
 export function useEscrowDeposit() {
   const { writeContractAsync } = useWriteContract();
   const publicClient = usePublicClient();
@@ -116,46 +124,51 @@ export function useEscrowDeposit() {
    * @param nftContract    ERC-721 contract address of the collateral.
    * @param tokenId        Token ID of the collateral.
    * @param onStep         Optional callback to track progress between the two txs.
-   * @returns              Hash of the depositNFT transaction.
+   * @returns              Both tx hashes for on-screen confirmation and Basescan links.
+   * @throws               A human-readable error string via parseEscrowError.
    */
   const approveAndDeposit = async (
     numericLoanId: bigint,
     nftContract: `0x${string}`,
     tokenId: bigint,
     onStep?: (step: DepositStep) => void
-  ): Promise<`0x${string}`> => {
-    if (!ESCROW_ADDRESS) throw new Error('Escrow contract not deployed yet.');
-    // Runtime guard: verify the contract actually exists on-chain before
-    // letting the user sign an approval against a potentially undeployed address.
-    const code = await publicClient!.getCode({ address: ESCROW_ADDRESS as `0x${string}` });
-    if (!code || code === '0x') {
-      throw new Error('Escrow contract not found on this network. Please connect to Base Mainnet.');
+  ): Promise<DepositResult> => {
+    try {
+      if (!ESCROW_ADDRESS) throw new Error('Escrow contract not deployed yet.');
+      // Runtime guard: verify the contract actually exists on-chain before
+      // letting the user sign an approval against a potentially undeployed address.
+      const code = await publicClient!.getCode({ address: ESCROW_ADDRESS as `0x${string}` });
+      if (!code || code === '0x') {
+        throw new Error('Escrow contract not found on this network. Please connect to Base Mainnet.');
+      }
+      const escrowAddr = ESCROW_ADDRESS as `0x${string}`;
+
+      // 1. Approve escrow to transfer the NFT
+      onStep?.('approving');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const approveTxHash = await (writeContractAsync as any)({
+        address: nftContract,
+        abi: ERC721_MINIMAL_ABI,
+        functionName: 'approve',
+        args: [escrowAddr, tokenId],
+      }) as `0x${string}`;
+      await publicClient!.waitForTransactionReceipt({ hash: approveTxHash });
+
+      // 2. Deposit NFT into escrow
+      onStep?.('depositing');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const depositTxHash = await (writeContractAsync as any)({
+        address: escrowAddr,
+        abi: ESCROW_ABI,
+        functionName: 'depositNFT',
+        args: [numericLoanId, nftContract, tokenId],
+      }) as `0x${string}`;
+      await publicClient!.waitForTransactionReceipt({ hash: depositTxHash });
+
+      return { approveTxHash, depositTxHash };
+    } catch (err) {
+      throw new Error(parseEscrowError(err));
     }
-    const escrowAddr = ESCROW_ADDRESS as `0x${string}`;
-
-    // 1. Approve escrow to transfer the NFT
-    onStep?.('approving');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const approveTx = await (writeContractAsync as any)({
-      address: nftContract,
-      abi: ERC721_MINIMAL_ABI,
-      functionName: 'approve',
-      args: [escrowAddr, tokenId],
-    }) as `0x${string}`;
-    await publicClient!.waitForTransactionReceipt({ hash: approveTx });
-
-    // 2. Deposit NFT into escrow
-    onStep?.('depositing');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const depositTx = await (writeContractAsync as any)({
-      address: escrowAddr,
-      abi: ESCROW_ABI,
-      functionName: 'depositNFT',
-      args: [numericLoanId, nftContract, tokenId],
-    }) as `0x${string}`;
-    await publicClient!.waitForTransactionReceipt({ hash: depositTx });
-
-    return depositTx;
   };
 
   // escrowReady is only true when the address passes the format guard AND the
@@ -223,16 +236,20 @@ export function useEscrowAdmin() {
     functionName: 'releaseToOwner' | 'sweepToShop',
     loanId: bigint
   ): Promise<`0x${string}`> => {
-    if (!ESCROW_ADDRESS) throw new Error('Escrow contract not deployed yet.');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const tx = await (writeContractAsync as any)({
-      address: ESCROW_ADDRESS as `0x${string}`,
-      abi: ESCROW_ABI,
-      functionName,
-      args: [loanId],
-    }) as `0x${string}`;
-    await publicClient!.waitForTransactionReceipt({ hash: tx });
-    return tx;
+    try {
+      if (!ESCROW_ADDRESS) throw new Error('Escrow contract not deployed yet.');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const tx = await (writeContractAsync as any)({
+        address: ESCROW_ADDRESS as `0x${string}`,
+        abi: ESCROW_ABI,
+        functionName,
+        args: [loanId],
+      }) as `0x${string}`;
+      await publicClient!.waitForTransactionReceipt({ hash: tx });
+      return tx;
+    } catch (err) {
+      throw new Error(parseEscrowError(err));
+    }
   };
 
   return {

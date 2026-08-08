@@ -104,6 +104,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 }) => {
     const [step, setStep] = useState<TransactionStep>('initial');
     const [errorMessage, setErrorMessage] = useState('');
+    const [depositTxHash, setDepositTxHash] = useState<string | null>(null);
     const { approveAndDeposit, escrowReady } = useEscrowDeposit();
     const chainId = useChainId();
     const { isConnected: isEvmConnected, address: evmAddress } = useAccount();
@@ -120,7 +121,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
     const useOnChain = escrowReady && !!contractAddress && !!tokenId && !!numericLoanId;
 
     useEffect(() => {
-        if (isOpen) { setStep('initial'); setErrorMessage(''); }
+        if (isOpen) { setStep('initial'); setErrorMessage(''); setDepositTxHash(null); }
     }, [isOpen]);
 
     const buildLoan = useCallback((): Loan => ({
@@ -141,7 +142,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         try {
             if (useOnChain) {
                 // ── Real on-chain flow ───────────────────────────────────────
-                await approveAndDeposit(
+                const result = await approveAndDeposit(
                     numericLoanId!,
                     contractAddress as `0x${string}`,
                     BigInt(tokenId!),
@@ -149,6 +150,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                         setStep(depositStep === 'approving' ? 'approving' : 'depositing');
                     }
                 );
+                setDepositTxHash(result.depositTxHash);
             } else {
                 // ── Simulated flow (no escrow deployed / no NFT data) ────────
                 setStep('approving');
@@ -302,6 +304,17 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
                                 ? 'Your NFT is secured in the on-chain vault. The loan is live in your dashboard.'
                                 : 'The loan amount has been sent to your wallet. Your new loan is now visible in your dashboard.'}
                         </p>
+                        {depositTxHash && (
+                            <a
+                                href={`https://basescan.org/tx/${depositTxHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-3 inline-flex items-center gap-1.5 text-xs text-brand-gold hover:text-brand-gold-light underline underline-offset-2 transition-colors"
+                            >
+                                <span className="w-2 h-2 bg-green-400 rounded-full inline-block" />
+                                View deposit transaction on Basescan ↗
+                            </a>
+                        )}
                         <button
                             onClick={onClose}
                             className="w-full mt-6 bg-brand-gold text-brand-dark font-bold py-2.5 px-6 rounded-lg hover:bg-brand-gold-light"

@@ -272,11 +272,24 @@ const AdminPage: React.FC = () => {
         if (!loan.numericLoanId) return;
         setEscrowLoadingId(loan.id);
         try {
-            await releaseToOwner(BigInt(loan.numericLoanId));
+            const txHash = await releaseToOwner(BigInt(loan.numericLoanId));
             await adminUpdateLoan(loan.id, { status: 'Repaid', nftTransferStatus: 'returned' });
-            toast.success('NFT released to borrower on-chain.');
-        } catch {
-            toast.error('Release failed — connected wallet must be the contract owner.');
+            toast.success(
+                <span>
+                    NFT released to borrower on-chain.{' '}
+                    <a
+                        href={`https://basescan.org/tx/${txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-semibold"
+                    >
+                        View on Basescan ↗
+                    </a>
+                </span>
+            );
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Release failed — connected wallet must be the contract owner.';
+            toast.error(msg);
         } finally {
             setEscrowLoadingId(null);
         }
@@ -286,11 +299,24 @@ const AdminPage: React.FC = () => {
         if (!loan.numericLoanId) return;
         setEscrowLoadingId(loan.id);
         try {
-            await sweepToShop(BigInt(loan.numericLoanId));
+            const txHash = await sweepToShop(BigInt(loan.numericLoanId));
             await adminUpdateLoan(loan.id, { status: 'Liquidated', nftTransferStatus: 'liquidated' });
-            toast.success('NFT swept to shop on-chain.');
-        } catch {
-            toast.error('Sweep failed — connected wallet must be the contract owner.');
+            toast.success(
+                <span>
+                    NFT swept to shop on-chain.{' '}
+                    <a
+                        href={`https://basescan.org/tx/${txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="underline font-semibold"
+                    >
+                        View on Basescan ↗
+                    </a>
+                </span>
+            );
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Sweep failed — connected wallet must be the contract owner.';
+            toast.error(msg);
         } finally {
             setEscrowLoadingId(null);
         }
