@@ -425,6 +425,10 @@ contract DigiPawnsEscrow is
 
     // ─── Internal helpers ─────────────────────────────────────────────────────
 
+    function _collateralKey(address nftContract, uint256 tokenId) internal pure returns (bytes32) {
+        return keccak256(abi.encode(nftContract, tokenId));
+    }
+
     /**
      * @dev  Compute the borrower tier from their live $DIG and $PC balances.
      *       Returns NONE when token addresses are not configured.
