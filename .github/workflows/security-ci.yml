@@ -11,7 +11,6 @@ permissions:
 
 env:
   NPM_CONFIG_REGISTRY: https://registry.npmjs.org
-  NPM_CONFIG_REPLACE_REGISTRY_HOST: always
 
 jobs:
   frontend:
@@ -25,11 +24,11 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
-      - name: Install locked dependencies
-        run: npm ci --include=dev
+      - name: Install dependencies from the public registry
+        run: npm install --include=dev --package-lock=false
 
       - name: Build frontend
         run: npm run build
@@ -51,12 +50,12 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: contracts/package-lock.json
 
-      - name: Install locked dependencies
-        run: npm ci --include=dev
+      - name: Install dependencies from the public registry
+        run: npm install --include=dev --package-lock=false
 
       - name: Compile contracts
         run: npm run compile
