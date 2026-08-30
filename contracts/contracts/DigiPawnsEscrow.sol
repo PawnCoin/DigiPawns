@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title  DigiPawnsEscrow v2
@@ -43,7 +43,7 @@ import "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol
 contract DigiPawnsEscrow is
     OwnableUpgradeable,
     PausableUpgradeable,
-    ReentrancyGuardUpgradeable,
+    ReentrancyGuard,
     ERC721Holder,
     UUPSUpgradeable
 {
@@ -182,7 +182,6 @@ contract DigiPawnsEscrow is
 
         __Ownable_init(_initialOwner);
         __Pausable_init();
-        __ReentrancyGuard_init();
         // UUPSUpgradeable, ReentrancyGuard, ERC721Holder are @custom:stateless
         // in OZ v5 — no init calls needed for proxy compatibility.
 
