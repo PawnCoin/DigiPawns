@@ -350,6 +350,7 @@ contract DigiPawnsEscrow is
         bytes32 collateralKey = _collateralKey(nftContract, tokenId);
         require(!_activeCollateral[collateralKey], "Escrow: collateral already active");
         IERC721(nftContract).safeTransferFrom(msg.sender, address(this), tokenId);
+        _activeCollateral[collateralKey] = true;
 
         _loans[loanId] = Loan({
             borrower:    msg.sender,
