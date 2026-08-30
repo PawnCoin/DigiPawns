@@ -2,8 +2,6 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ── Helper functions ────────────────────────────────────────────────
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -12,119 +10,99 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isDocOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.uid;
-    }
-
     function isAdmin() {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true;
+      return isAuthenticated()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true;
     }
 
-    // ── Users ────────────────────────────────────────────────────────────
-    // Any signed-in user can read profiles (needed for friend search + profiles)
-    // Only the owner or admin can write
+    function onlyChanges(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // Public profile data is readable to signed-in users. Users can only edit
+    // display and wallet-link fields; privilege and balance fields are protected.
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId)
+        && request.resource.data.get('isAdmin', false) == false
+        && request.resource.data.get('balance', 0) == 0;
+      allow update: if isAdmin() || (
+        isOwner(userId)
+        && onlyChanges(['username', 'avatarNftUrl', 'walletAddress', 'solanaAddress'])
+      );
       allow delete: if isAdmin();
     }
 
-    // ── Notification settings ────────────────────────────────────────────
     match /notificationSettings/{userId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow read, create, update: if isOwner(userId);
       allow delete: if false;
     }
 
-    // ── Loans ────────────────────────────────────────────────────────────
-    // Owner can read/create/update their own; admin can read/update/delete all
+    // Borrowers may submit a loan request, but only an administrator/trusted
+    // backend may change financial terms or lifecycle state after creation.
     match /loans/{loanId} {
-      allow read: if isAuthenticated() && (
-        resource.data.uid == request.auth.uid || isAdmin()
-      );
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
-      allow update: if isAuthenticated() && (
-        resource.data.uid == request.auth.uid || isAdmin()
-      );
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated()
+        && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
-    // ── Activities ───────────────────────────────────────────────────────
     match /activities/{activityId} {
       allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
-      allow update: if false;
-      allow delete: if false;
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
     }
 
-    // ── Friends ──────────────────────────────────────────────────────────
-    // A friendship doc ID is "{uid}_{friendUid}".
-    // The owner uid stored in the doc must match the requester.
     match /friends/{friendshipId} {
-      allow read: if isAuthenticated() && (
-        resource.data.uid == request.auth.uid ||
-        resource.data.friendUid == request.auth.uid
-      );
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
-      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid;
-      allow delete: if isAuthenticated() && (
-        resource.data.uid == request.auth.uid ||
-        resource.data.friendUid == request.auth.uid
-      );
+      allow read: if isAuthenticated()
+        && (resource.data.uid == request.auth.uid || resource.data.friendUid == request.auth.uid);
+      allow create: if isAuthenticated()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.friendUid != request.auth.uid;
+      allow update: if isAuthenticated()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.friendUid == resource.data.friendUid;
+      allow delete: if isAuthenticated()
+        && (resource.data.uid == request.auth.uid || resource.data.friendUid == request.auth.uid);
     }
 
-    // ── Messages ─────────────────────────────────────────────────────────
-    // Only participants of the conversation can read/write
     match /messages/{messageId} {
-      allow read: if isAuthenticated() && (
-        resource.data.fromUid == request.auth.uid ||
-        resource.data.toUid == request.auth.uid
-      );
-      allow create: if isAuthenticated() && request.resource.data.fromUid == request.auth.uid;
-      allow update: if isAuthenticated() && (
-        resource.data.toUid == request.auth.uid  // only recipient can mark read
-      );
+      allow read: if isAuthenticated()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if isAuthenticated()
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid != request.auth.uid;
+      allow update: if isAuthenticated()
+        && resource.data.toUid == request.auth.uid
+        && request.resource.data.fromUid == resource.data.fromUid
+        && request.resource.data.toUid == resource.data.toUid
+        && onlyChanges(['read', 'readAt']);
       allow delete: if false;
     }
 
-    // ── Collections (curated NFT collections) ────────────────────────────
-    // Anyone can read; only admins can write
     match /collections/{collectionId} {
       allow read: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
-    // ── Shop inventory (the shop floor) ──────────────────────────────────
-    // Anyone can read the floor. Any signed-in user can list an item (selling,
-    // trading in, or a loan being liquidated) or remove one (buying/trading it
-    // away). Only admins can edit an existing listing's details.
+    // Marketplace inventory and ownership records are financial state.
+    // They must only be mutated by an administrator or trusted backend.
     match /shopInventory/{itemId} {
       allow read: if true;
-      allow create: if isAuthenticated();
-      allow update: if isAdmin();
-      allow delete: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
     }
 
-    // ── Owned items (what a user has bought or traded for) ──────────────
     match /ownedItems/{itemId} {
-      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
-      allow update: if false;
-      allow delete: if false;
+      allow read: if isAuthenticated()
+        && resource.data.uid == request.auth.uid;
+      allow create, update, delete: if isAdmin();
     }
 
-    // ── Watched wallets (saved wallet bookmarks per user) ────────────────
-    // Only the owner can read, create, or delete their own saved wallets.
     match /users/{userId}/watchedWallets/{walletId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow read, create, update, delete: if isOwner(userId);
     }
   }
 }
