@@ -625,6 +625,59 @@ describe("DigiPawnsEscrow v2", function () {
     });
   });
 
+  // ─── Accidental NFT recovery ───────────────────────────────────────────────
+
+  describe("rescueUntrackedNFT", function () {
+    async function sendDirectlyToEscrow() {
+      await nft
+        .connect(borrower)
+        ["safeTransferFrom(address,address,uint256)"](
+          borrower.address,
+          escrowAddress,
+          TOKEN_ID
+        );
+    }
+
+    it("recovers an untracked NFT only while paused", async function () {
+      await sendDirectlyToEscrow();
+
+      await expect(
+        escrow.connect(owner).rescueUntrackedNFT(nftAddress, TOKEN_ID, borrower.address)
+      ).to.be.revertedWithCustomError(escrow, "ExpectedPause");
+
+      await escrow.connect(owner).pause();
+      await expect(
+        escrow.connect(owner).rescueUntrackedNFT(nftAddress, TOKEN_ID, borrower.address)
+      )
+        .to.emit(escrow, "UntrackedNFTRescued")
+        .withArgs(nftAddress, TOKEN_ID, borrower.address);
+
+      expect(await nft.ownerOf(TOKEN_ID)).to.equal(borrower.address);
+    });
+
+    it("rejects recovery by a non-owner", async function () {
+      await sendDirectlyToEscrow();
+      await escrow.connect(owner).pause();
+
+      await expect(
+        escrow.connect(other).rescueUntrackedNFT(nftAddress, TOKEN_ID, other.address)
+      )
+        .to.be.revertedWithCustomError(escrow, "OwnableUnauthorizedAccount")
+        .withArgs(other.address);
+    });
+
+    it("never rescues active loan collateral", async function () {
+      await escrow.connect(borrower).depositNFT(LOAN_ID, nftAddress, TOKEN_ID);
+      await escrow.connect(owner).pause();
+
+      await expect(
+        escrow.connect(owner).rescueUntrackedNFT(nftAddress, TOKEN_ID, borrower.address)
+      ).to.be.revertedWith("Escrow: active collateral");
+
+      expect(await nft.ownerOf(TOKEN_ID)).to.equal(escrowAddress);
+    });
+  });
+
   // ─── getLoan ──────────────────────────────────────────────────────────────
 
   describe("getLoan", function () {

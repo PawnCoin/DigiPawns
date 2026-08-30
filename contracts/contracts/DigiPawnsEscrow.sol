@@ -112,6 +112,9 @@ contract DigiPawnsEscrow is
      */
     uint256 public goldRewardMultiplier;
 
+    /// @dev Tracks collateral held through a valid active loan. Appended for upgrade-safe storage.
+    mapping(bytes32 => bool) private _activeCollateral;
+
     // ─── Events ──────────────────────────────────────────────────────────────
 
     // Core loan lifecycle
@@ -143,6 +146,7 @@ contract DigiPawnsEscrow is
         uint256 amount
     );
     event RewardPoolInsufficient(uint256 loanId, uint256 needed, uint256 available);
+    event UntrackedNFTRescued(address indexed nftContract, uint256 indexed tokenId, address indexed recipient);
 
     // Admin config changes
     event ShopAddressUpdated(address indexed oldShop,  address indexed newShop);
@@ -343,7 +347,10 @@ contract DigiPawnsEscrow is
         Tier tier = _computeTier(msg.sender);
 
         // ── Transfer NFT into escrow ─────────────────────────────────────────
-        IERC721(nftContract).transferFrom(msg.sender, address(this), tokenId);
+        bytes32 collateralKey = _collateralKey(nftContract, tokenId);
+        require(!_activeCollateral[collateralKey], "Escrow: collateral already active");
+        IERC721(nftContract).safeTransferFrom(msg.sender, address(this), tokenId);
+        _activeCollateral[collateralKey] = true;
 
         _loans[loanId] = Loan({
             borrower:    msg.sender,
@@ -371,7 +378,8 @@ contract DigiPawnsEscrow is
         loan.status = LoanStatus.Released;
 
         // Return NFT
-        IERC721(loan.nftContract).transferFrom(address(this), loan.borrower, loan.tokenId);
+        _activeCollateral[_collateralKey(loan.nftContract, loan.tokenId)] = false;
+        IERC721(loan.nftContract).safeTransferFrom(address(this), loan.borrower, loan.tokenId);
         emit NFTReleased(loanId, loan.borrower, loan.nftContract, loan.tokenId);
 
         // Pay tier-based reward (if configured and pool is funded)
@@ -390,11 +398,37 @@ contract DigiPawnsEscrow is
         require(!frozenLoans[loanId],                "Escrow: loan is frozen");
 
         loan.status = LoanStatus.Swept;
-        IERC721(loan.nftContract).transferFrom(address(this), shopAddress, loan.tokenId);
+        _activeCollateral[_collateralKey(loan.nftContract, loan.tokenId)] = false;
+        IERC721(loan.nftContract).safeTransferFrom(address(this), shopAddress, loan.tokenId);
         emit NFTSweptToShop(loanId, shopAddress, loan.nftContract, loan.tokenId);
     }
 
+    /**
+     * @notice Recover an NFT sent directly to the contract outside depositNFT().
+     * @dev Active loan collateral can never be rescued through this function.
+     * Recovery is restricted to the owner while the protocol is paused.
+     */
+    function rescueUntrackedNFT(
+        address nftContract,
+        uint256 tokenId,
+        address recipient
+    ) external onlyOwner nonReentrant whenPaused {
+        require(nftContract != address(0), "Escrow: zero NFT contract");
+        require(recipient != address(0), "Escrow: zero recipient");
+        require(
+            !_activeCollateral[_collateralKey(nftContract, tokenId)],
+            "Escrow: active collateral"
+        );
+
+        IERC721(nftContract).safeTransferFrom(address(this), recipient, tokenId);
+        emit UntrackedNFTRescued(nftContract, tokenId, recipient);
+    }
+
     // ─── Internal helpers ─────────────────────────────────────────────────────
+
+    function _collateralKey(address nftContract, uint256 tokenId) internal pure returns (bytes32) {
+        return keccak256(abi.encode(nftContract, tokenId));
+    }
 
     /**
      * @dev  Compute the borrower tier from their live $DIG and $PC balances.
