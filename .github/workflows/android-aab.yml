@@ -1,0 +1,59 @@
+name: Android AAB
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/android-capacitor
+
+permissions:
+  contents: read
+
+jobs:
+  build-aab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install web dependencies
+        run: npm install --include=dev --package-lock=false
+
+      - name: Install Capacitor tooling
+        run: npm install --no-save --package-lock=false @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Build unchanged web app
+        run: npm run build
+
+      - name: Create and sync Android project
+        run: |
+          npx cap add android
+          npx cap sync android
+
+      - name: Build debug AAB
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleDebug
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digipawns-debug-aab
+          path: android/app/build/outputs/bundle/debug/app-debug.aab
+          if-no-files-found: error
+          retention-days: 14
