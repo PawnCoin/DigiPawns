@@ -34,3 +34,9 @@ This application showcases a full suite of features expected from a production-g
 
 ## How to Run
 This is a self-contained application running in a specialized environment. All necessary dependencies are managed via an `importmap` in `index.html`, and no manual installation is required. The application state is managed within the browser.
+
+## Escrow status
+
+The production address is a UUPS/ERC-1967 proxy on Base Mainnet. The V2 ABI remains in `contracts/contracts/DigiPawnsEscrow.sol`; the migration-safe V3 upgrade candidate, tests, and read-only proposal tooling live in the same `contracts` package.
+
+V3 is not automatically deployed by this repository. Before a Base Mainnet upgrade, verify the exact live implementation storage layout, inventory every active legacy loan and NFT held by the proxy, run the upgrade against a Base fork, verify the candidate implementation on BaseScan, and obtain independent Solidity review. The website must continue using the existing proxy address.

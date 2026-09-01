@@ -10,11 +10,14 @@
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "deploy:base": "hardhat run scripts/deploy.ts --network base",
-    "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia"
+    "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
+    "storage:check": "hardhat run scripts/check-storage.js",
+    "upgrade:prepare": "hardhat run scripts/prepare-upgrade.js --network base"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "dotenv": "^16.4.0",
     "hardhat": "^2.22.0",
     "tsx": "^4.23.1",
