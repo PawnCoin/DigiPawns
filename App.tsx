@@ -6,6 +6,9 @@ import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import AdminPage from './pages/AdminPage';
 import ShopPage from './pages/ShopPage';
+import PrivacyPage from './pages/PrivacyPage';
+import SupportPage from './pages/SupportPage';
+import LoginPage from './pages/LoginPage';
 import VideoTemplate from './components/video/VideoTemplate';
 import { Toaster } from 'sonner';
 
@@ -20,6 +23,12 @@ const App: React.FC = () => {
         return <Layout><AdminPage /></Layout>;
       case '/shop':
         return <Layout><ShopPage /></Layout>;
+      case '/privacy':
+        return <Layout><PrivacyPage /></Layout>;
+      case '/support':
+        return <Layout><SupportPage /></Layout>;
+      case '/login':
+        return <Layout><LoginPage /></Layout>;
       case '/video':
         return <VideoTemplate />;
       case '/':
