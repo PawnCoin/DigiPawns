@@ -7,10 +7,9 @@ async function main() {
     kind: "uups",
     unsafeAllow: ["constructor"],
   });
-  console.log("Candidate is append-only compatible with the reconstructed supplied V2 layout.");
-  console.log("Base Mainnet upgrade remains blocked until the exact live implementation layout is verified.");
+  console.log("Candidate is append-only compatible with the exact recovered live V2 layout.");
+  console.log("Live implementation artifact: Remix build-info 7df5c5859ff0563ae397db9d1f5a2b80.");
 }
 
 main().catch((error) => { console.error(error); process.exitCode = 1; });
-
 

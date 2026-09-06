@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { ethers } = require("hardhat");
 
-const EXPECTED_CHAIN_ID = 8453n;
+const EXPECTED_CHAIN_ID = 1n;
 const EXPECTED_PROXY = "0x0FA851786bF8f1B0FE3AC0C2b4A0ec70BEc7a79d";
 const EXPECTED_IMPLEMENTATION = "0x15059a4DE6C6C8Ac12626Ae50e470DCc32e2Fc23";
 const IMPLEMENTATION_SLOT = "0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc";
@@ -16,7 +16,7 @@ function required(name) {
 async function main() {
   const provider = ethers.provider;
   const network = await provider.getNetwork();
-  if (network.chainId !== EXPECTED_CHAIN_ID) throw new Error(`Refusing chain ${network.chainId}; expected Base Mainnet (8453)`);
+  if (network.chainId !== EXPECTED_CHAIN_ID) throw new Error(`Refusing chain ${network.chainId}; expected Ethereum Mainnet (1)`);
 
   const proxy = ethers.getAddress(process.env.ESCROW_PROXY || EXPECTED_PROXY);
   if (proxy !== ethers.getAddress(EXPECTED_PROXY)) throw new Error("Unexpected proxy address");
@@ -87,4 +87,3 @@ async function main() {
 }
 
 main().catch((error) => { console.error(error.message); process.exitCode = 1; });
-

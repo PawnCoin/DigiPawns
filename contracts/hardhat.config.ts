@@ -13,6 +13,8 @@ const BASE_MAINNET_RPC =
   process.env.BASE_MAINNET_RPC_URL ?? "https://mainnet.base.org";
 const BASE_SEPOLIA_RPC =
   process.env.BASE_SEPOLIA_RPC_URL ?? "https://sepolia.base.org";
+const ETHEREUM_MAINNET_RPC =
+  process.env.ETHEREUM_MAINNET_RPC_URL ?? "https://ethereum-rpc.publicnode.com";
 const BASESCAN_API_KEY = process.env.BASESCAN_API_KEY ?? "";
 
 const config: HardhatUserConfig = {
@@ -39,6 +41,12 @@ const config: HardhatUserConfig = {
       url: BASE_SEPOLIA_RPC,
       accounts: [PRIVATE_KEY],
       chainId: 84532,
+    },
+    // Existing DigiPawns escrow proxy is deployed on Ethereum Mainnet.
+    ethereum: {
+      url: ETHEREUM_MAINNET_RPC,
+      accounts: [PRIVATE_KEY],
+      chainId: 1,
     },
   },
   etherscan: {
