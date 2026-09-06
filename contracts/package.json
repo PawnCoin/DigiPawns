@@ -9,8 +9,6 @@
     "coverage": "hardhat coverage",
     "node": "hardhat node",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
-    "deploy:base": "hardhat run scripts/deploy.ts --network base",
-    "deploy:baseSepolia": "hardhat run scripts/deploy.ts --network baseSepolia",
     "storage:check": "hardhat run scripts/check-storage.js",
     "upgrade:prepare": "hardhat run scripts/prepare-upgrade.js --network ethereum"
   },
