@@ -37,9 +37,14 @@ This is a self-contained application running in a specialized environment. All n
 
 ## Escrow status
 
-The production address is a UUPS/ERC-1967 proxy on Base Mainnet. The V2 ABI remains in `contracts/contracts/DigiPawnsEscrow.sol`; the migration-safe V3 upgrade candidate, tests, and read-only proposal tooling live in the same `contracts` package.
+The production address is a UUPS/ERC-1967 proxy on Ethereum Mainnet:
 
-V3 is not automatically deployed by this repository. Before a Base Mainnet upgrade, verify the exact live implementation storage layout, inventory every active legacy loan and NFT held by the proxy, run the upgrade against a Base fork, verify the candidate implementation on BaseScan, and obtain independent Solidity review. The website must continue using the existing proxy address.
+- Proxy used by the website: [`0x0FA851786bF8f1B0FE3AC0C2b4A0ec70BEc7a79d`](https://etherscan.io/address/0x0FA851786bF8f1B0FE3AC0C2b4A0ec70BEc7a79d#code)
+- Deployed V3 implementation: [`0xc0f406C4f93Ee397a9D114B6ED3D9D21AA6a8f2d`](https://etherscan.io/address/0xc0f406C4f93Ee397a9D114B6ED3D9D21AA6a8f2d#code)
+- Deployment transaction: [`0x4b16a00c66c17ec912130caf6c27e5ceacd5af4af8f3f5073292483d3037d12d`](https://etherscan.io/tx/0x4b16a00c66c17ec912130caf6c27e5ceacd5af4af8f3f5073292483d3037d12d)
+- Verification: Etherscan exact match, Solidity `0.8.28`, optimizer enabled with 200 runs, Cancun EVM, MIT license
+
+Deploying the implementation did not change the live proxy. The proxy must continue to be the address used by the website, and any activation of V3 still requires a separate owner-authorized upgrade transaction with the correct migration initialization. Before that transaction, inventory every active legacy loan and NFT held by the proxy, validate the storage layout and migration inputs, run the upgrade against an Ethereum Mainnet fork, and obtain independent Solidity review. The V2 ABI remains in `contracts/contracts/DigiPawnsEscrow.sol`; the migration-safe V3 implementation and tests live in the same `contracts` package.
 
 ## Android / Google Play
 
