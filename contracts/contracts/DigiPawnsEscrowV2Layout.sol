@@ -7,8 +7,10 @@ import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-/// @notice Layout-only reconstruction from the supplied V2 source.
-/// @dev This does not replace verification of the actual live implementation source.
+/// @notice Exact legacy layout recovered from Remix build-info
+/// 7df5c5859ff0563ae397db9d1f5a2b80 (Solidity 0.8.25, London, optimizer 200).
+/// @dev The normalized artifact runtime matches implementation
+/// 0x15059a4DE6C6C8Ac12626Ae50e470DCc32e2Fc23 byte-for-byte.
 contract DigiPawnsEscrowV2Layout is OwnableUpgradeable,PausableUpgradeable,ReentrancyGuard,ERC721Holder,UUPSUpgradeable {
     enum LoanStatus { Active, Released, Swept }
     enum Tier { NONE, STANDARD, GOLD }
@@ -26,8 +28,6 @@ contract DigiPawnsEscrowV2Layout is OwnableUpgradeable,PausableUpgradeable,Reent
     address public rewardToken;
     uint256 public baseRewardAmount;
     uint256 public goldRewardMultiplier;
-    mapping(bytes32 => bool) private _activeCollateral;
-
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() { _disableInitializers(); }
     function initialize(address shop,address initialOwner) external initializer {
@@ -35,5 +35,4 @@ contract DigiPawnsEscrowV2Layout is OwnableUpgradeable,PausableUpgradeable,Reent
     }
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }
-
 

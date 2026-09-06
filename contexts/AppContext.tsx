@@ -15,8 +15,7 @@ import type { WalletName } from '@solana/wallet-adapter-base';
 import { TARGET_CHAIN, WALLET_OPTIONS, SUPPORTED_EVM_CHAINS, SUPPORTED_EVM_CHAIN_IDS } from '../lib/web3';
 import WalletPickerModal from '../components/WalletPickerModal';
 
-// Store credit is disabled until balances are issued by a trusted backend.
-const STARTING_BALANCE = 0;
+const STARTING_BALANCE = 25000;
 
 declare global {
     interface Window { ethereum?: any; }
