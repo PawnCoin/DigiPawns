@@ -9,8 +9,8 @@ const Footer: React.FC = () => {
           <DigiPawnsFullLogo />
           <p className="text-sm text-gray-500">&copy; {new Date().getFullYear()} DigiPawns. All rights reserved.</p>
           <div className="flex space-x-4">
-            <a href="#" className="text-gray-500 hover:text-brand-gold transition-colors">Terms of Service</a>
-            <a href="#" className="text-gray-500 hover:text-brand-gold transition-colors">Privacy Policy</a>
+            <a href="/support" className="text-gray-500 hover:text-brand-gold transition-colors">Support</a>
+            <a href="/privacy" className="text-gray-500 hover:text-brand-gold transition-colors">Privacy Policy</a>
           </div>
         </div>
       </div>

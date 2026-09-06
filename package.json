@@ -7,9 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "android:sync": "npm run build && npx cap sync android",
+    "android:bundle": "npm run android:sync && cd android && ./gradlew bundleRelease",
     "deploy:rules": "firebase deploy --only firestore:rules --project gen-lang-client-0700637310"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.0",
+    "@capacitor/core": "8.5.0",
     "@bonfida/spl-name-service": "^3.0.26",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
@@ -36,6 +40,7 @@
     "wagmi": "^2.19.5"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.0",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",

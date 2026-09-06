@@ -2,8 +2,12 @@ name: Android AAB
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
+      - main
       - codex/android-capacitor
 
 permissions:
@@ -30,30 +34,40 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Install web dependencies
-        run: npm install --include=dev --package-lock=false
-
-      - name: Install Capacitor tooling
-        run: npm install --no-save --package-lock=false @capacitor/core @capacitor/cli @capacitor/android
+      - name: Install dependencies
+        run: npm ci --include=dev
 
       - name: Build unchanged web app
         run: npm run build
 
-      - name: Create and sync Android project
-        run: |
-          npx cap add android
-          npx cap sync android
+      - name: Sync Android project
+        run: npx cap sync android
 
-      - name: Build debug AAB
+      - name: Restore upload signing key
+        env:
+          DGP_UPLOAD_KEYSTORE_BASE64: ${{ secrets.DGP_UPLOAD_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$DGP_UPLOAD_KEYSTORE_BASE64"
+          echo "$DGP_UPLOAD_KEYSTORE_BASE64" | base64 --decode > android/app/digipawns-upload.jks
+
+      - name: Build Play release AAB
         working-directory: android
+        env:
+          DGP_UPLOAD_STORE_FILE: digipawns-upload.jks
+          DGP_UPLOAD_STORE_PASSWORD: ${{ secrets.DGP_UPLOAD_STORE_PASSWORD }}
+          DGP_UPLOAD_KEY_ALIAS: ${{ secrets.DGP_UPLOAD_KEY_ALIAS }}
+          DGP_UPLOAD_KEY_PASSWORD: ${{ secrets.DGP_UPLOAD_KEY_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew bundleDebug
+          ./gradlew bundleRelease
+
+      - name: Verify release signing
+        run: jarsigner -verify -certs android/app/build/outputs/bundle/release/app-release.aab
 
       - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: digipawns-debug-aab
-          path: android/app/build/outputs/bundle/debug/app-debug.aab
+          name: digipawns-play-release-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 14
