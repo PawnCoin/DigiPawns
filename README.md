@@ -4,7 +4,7 @@ DigiPawns is a modern, feature-rich web application that demonstrates a revoluti
 
 ## Key Features
 
-This application showcases a full suite of features expected from a production-grade decentralized application (dApp):
+This application contains a mix of live integrations and demonstration flows. Features that can transfer funds or NFT collateral must not be treated as production-ready until the live proxy upgrade, backend verification, and end-to-end transaction testing are complete.
 
 ### 1. Real Web3 Wallet Integration
 - **Live Wallet Connection:** Securely connect and disconnect real cryptocurrency wallets (e.g., MetaMask) using `ethers.js`.
@@ -21,10 +21,10 @@ This application showcases a full suite of features expected from a production-g
 - **Multi-Wallet Management:** Users can link additional read-only wallets and view a "last active" timestamp that updates on interaction.
 - **"Quick Appraise" Functionality:** Users can initiate a loan appraisal for any NFT directly from their portfolio viewer with a single click.
 
-### 4. End-to-End Loan Lifecycle Management
-- **Loan Initiation:** A guided, multi-step modal simulates the blockchain transaction for accepting a loan offer and securing collateral.
-- **Loan Repayment:** Active loans can be repaid through a dedicated modal, which allows users to select a repayment currency and simulates the transaction to reclaim their NFT.
-- **Loan Forfeiture & Liquidation:** A transparent flow for defaulted loans allows users to acknowledge the default and simulate the final, irreversible liquidation of their collateral.
+### 4. Loan Lifecycle Demonstration
+- **Loan Initiation:** The guided modal demonstrates accepting a loan offer; it is not a production collateral transaction until the V3 proxy upgrade and signed-offer backend are active.
+- **Loan Repayment:** Repayment screens demonstrate the intended experience. Release of collateral must depend on a verified on-chain repayment rather than client state.
+- **Loan Forfeiture & Liquidation:** The liquidation interface is a demonstration and must not be represented as completing an irreversible on-chain liquidation.
 
 ### 5. Modern Tech Stack & Architecture
 - **React & TypeScript:** A robust and type-safe front-end foundation.
@@ -45,6 +45,13 @@ The production address is a UUPS/ERC-1967 proxy on Ethereum Mainnet:
 - Verification: Etherscan exact match, Solidity `0.8.28`, optimizer enabled with 200 runs, Cancun EVM, MIT license
 
 Deploying the implementation did not change the live proxy. The proxy must continue to be the address used by the website, and any activation of V3 still requires a separate owner-authorized upgrade transaction with the correct migration initialization. Before that transaction, inventory every active legacy loan and NFT held by the proxy, validate the storage layout and migration inputs, run the upgrade against an Ethereum Mainnet fork, and obtain independent Solidity review. The V2 ABI remains in `contracts/contracts/DigiPawnsEscrow.sol`; the migration-safe V3 implementation and tests live in the same `contracts` package.
+
+### Production-status boundary
+
+- Live: public website, authentication, wallet connection, public-chain reads, and the verified V3 implementation deployment.
+- Not yet activated: V3 logic at the production proxy address.
+- Demonstration only: client-driven loan acceptance, repayment completion, liquidation, generated portfolio data, and any balance or transaction outcome not independently verified by a trusted backend and the target chain.
+- Never collected: wallet seed phrases or private keys.
 
 ## Android / Google Play
 
