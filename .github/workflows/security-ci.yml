@@ -28,7 +28,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies from the public registry
-        run: npm install --include=dev --package-lock=false
+        run: npm ci --include=dev
 
       - name: Build frontend
         run: npm run build
@@ -55,10 +55,13 @@ jobs:
           cache-dependency-path: contracts/package-lock.json
 
       - name: Install dependencies from the public registry
-        run: npm install --include=dev --package-lock=false
+        run: npm ci --include=dev
 
       - name: Compile contracts
         run: npm run compile
+
+      - name: Validate V3 upgrade storage layout
+        run: npm run storage:check
 
       - name: Run contract tests
         run: npm test
