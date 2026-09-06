@@ -45,9 +45,9 @@ contract DigiPawnsEscrowV3 is
     address public rewardToken;
     uint256 public baseRewardAmount;
     uint256 public goldRewardMultiplier;
-    mapping(bytes32 => bool) private _activeCollateral;
 
     // V3 append-only storage.
+    mapping(bytes32 => bool) private _activeCollateral;
     struct Terms {
         address lender;
         address currency;
@@ -169,14 +169,21 @@ contract DigiPawnsEscrowV3 is
         require(offer.dueAt > block.timestamp, "expired offer");
         _consumeSignedOffer(offer,platformSignature,lenderSignature);
 
-        loanId = nextLoanId++;
+        loanId = nextLoanId;
+        require(_loans[loanId].borrower == address(0), "loan id used");
+        nextLoanId = loanId + 1;
         bytes32 key = _collateralKey(offer.nftContract, offer.tokenId);
         require(!_activeCollateral[key], "collateral active");
         IERC721(offer.nftContract).safeTransferFrom(msg.sender,address(this),offer.tokenId);
         _activeCollateral[key] = true;
         // Origination is atomic: collateral cannot be locked unless the borrower
         // receives the exact principal approved and signed by the lender.
+        uint256 borrowerBalanceBefore = IERC20(offer.currency).balanceOf(msg.sender);
         IERC20(offer.currency).safeTransferFrom(offer.lender,msg.sender,offer.principal);
+        require(
+            IERC20(offer.currency).balanceOf(msg.sender) - borrowerBalanceBefore == offer.principal,
+            "principal amount mismatch"
+        );
         Tier tier = _computeTier(msg.sender);
         _loans[loanId] = Loan(msg.sender,offer.nftContract,offer.tokenId,LoanStatus.Active,tier);
         _terms[loanId] = Terms(offer.lender,offer.currency,offer.liquidationRecipient,offer.principal,offer.repayment,offer.aprBps,offer.dueAt,offer.appraisalHash,false,false);
@@ -193,7 +200,12 @@ contract DigiPawnsEscrowV3 is
         loan.status = LoanStatus.Released;
         _activeCollateral[_collateralKey(loan.nftContract,loan.tokenId)] = false;
         require(terms.currency != address(0), "unsupported legacy currency");
+        uint256 lenderBalanceBefore = IERC20(terms.currency).balanceOf(terms.lender);
         IERC20(terms.currency).safeTransferFrom(msg.sender,terms.lender,terms.repayment);
+        require(
+            IERC20(terms.currency).balanceOf(terms.lender) - lenderBalanceBefore == terms.repayment,
+            "repayment amount mismatch"
+        );
         IERC721(loan.nftContract).safeTransferFrom(address(this),loan.borrower,loan.tokenId);
         emit LoanRepaid(loanId,loan.borrower,terms.lender,terms.repayment);
         emit NFTReleased(loanId,loan.borrower,loan.nftContract,loan.tokenId);
@@ -245,7 +257,7 @@ contract DigiPawnsEscrowV3 is
     function setRewardConfig(address token,uint256 amount,uint256 multiplier) external onlyOwner {
         require(multiplier >= 100, "bad multiplier"); rewardToken=token; baseRewardAmount=amount; goldRewardMultiplier=multiplier;
     }
-    function withdrawRewardPool(address to,uint256 amount) external onlyOwner { require(to != address(0), "zero address"); IERC20(rewardToken).safeTransfer(to,amount); }
+    function withdrawRewardPool(address to,uint256 amount) external onlyOwner { require(to != address(0), "zero address"); require(rewardToken != address(0), "no reward token set"); IERC20(rewardToken).safeTransfer(to,amount); }
     function getLoan(uint256 id) external view returns (Loan memory) { return _loans[id]; }
     function getTerms(uint256 id) external view returns (Terms memory) { return _terms[id]; }
 
@@ -277,4 +289,3 @@ contract DigiPawnsEscrowV3 is
     }
     function _authorizeUpgrade(address) internal override onlyOwner {}
 }
-
