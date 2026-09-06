@@ -40,3 +40,9 @@ This is a self-contained application running in a specialized environment. All n
 The production address is a UUPS/ERC-1967 proxy on Base Mainnet. The V2 ABI remains in `contracts/contracts/DigiPawnsEscrow.sol`; the migration-safe V3 upgrade candidate, tests, and read-only proposal tooling live in the same `contracts` package.
 
 V3 is not automatically deployed by this repository. Before a Base Mainnet upgrade, verify the exact live implementation storage layout, inventory every active legacy loan and NFT held by the proxy, run the upgrade against a Base fork, verify the candidate implementation on BaseScan, and obtain independent Solidity review. The website must continue using the existing proxy address.
+
+## Android / Google Play
+
+The native Android wrapper targets Android API 36 and is committed under `android/`. Run `npm run android:sync` after changing web assets. The GitHub `Android AAB` workflow builds the signed Play release bundle when the four `DGP_UPLOAD_*` repository secrets are configured.
+
+Google Play graphics, genuine phone screenshots, listing copy, reviewer instructions, Data safety working notes, and policy URLs are under `store-assets/`. Public support and privacy resources are available at `/support` and `/privacy`.

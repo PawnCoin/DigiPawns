@@ -39,7 +39,7 @@ const CopyButton: React.FC<{ text: string }> = ({ text }) => {
 
 const Header: React.FC = () => {
   const {
-    isConnected, isAdmin, walletAddress, profile, connectWallet, disconnectWallet, navigate,
+    isConnected, isAdmin, walletAddress, profile, disconnectWallet, navigate,
     isWalletConnected, isConnectingWallet, isCorrectChain, chainName, disconnectChainWallet,
     openWalletPicker, switchToCorrectChain,
     isSolanaConnected, solanaAddress, disconnectSolanaWallet,
@@ -272,7 +272,7 @@ const Header: React.FC = () => {
                 </>
               ) : (
                 /* Logged out — Sign In */
-                <button onClick={connectWallet} className="btn-metallic-gold py-1.5 px-5 rounded-lg text-sm font-bold">
+                <button onClick={() => navigate('/login')} className="btn-metallic-gold py-1.5 px-5 rounded-lg text-sm font-bold">
                   Sign In
                 </button>
               )}
