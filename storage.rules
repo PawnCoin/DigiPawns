@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAdmin() {
+      return request.auth != null
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isSafeImage() {
+      return request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+    }
+
+    match /collections/{collectionId}/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSafeImage();
+      allow delete: if isAdmin();
+    }
+
+    match /shopItems/{itemId}/{fileName} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isSafeImage();
+      allow delete: if isAdmin();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
