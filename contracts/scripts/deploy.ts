@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 
 /**
- * Deploys DigiPawnsEscrow v2 (UUPS upgradeable proxy) to the configured network.
+ * Deploys DigiPawnsEscrow v2 for local development only.
  *
  * Deployment approach:
  *   1. Deploy the implementation (logic) contract — no constructor args (initializer disabled).
@@ -14,22 +14,13 @@ import { ethers } from "hardhat";
  *   SHOP_ADDRESS          — wallet that receives defaulted NFT collateral
  *
  * Optional:
- *   BASE_MAINNET_RPC_URL  — defaults to https://mainnet.base.org
- *   BASE_SEPOLIA_RPC_URL  — defaults to https://sepolia.base.org (testnet)
- *   BASESCAN_API_KEY      — needed only for post-deploy contract verification
  *   APPROVED_COLLECTIONS  — comma-separated ERC-721 contract addresses to
  *                           approve on the allowlist immediately after deploy
  *
- * Usage (mainnet):
- *   npm run deploy:base
+ * Usage: npm run deploy:local
  *
- * Usage (testnet):
- *   npm run deploy:baseSepolia
- *
- * To verify the implementation on Basescan (NOT the proxy):
- *   npx hardhat verify --network base <IMPL_ADDRESS>          # mainnet
- *   npx hardhat verify --network baseSepolia <IMPL_ADDRESS>   # testnet
- * Then verify the proxy through Basescan's "Is this a Proxy?" UI.
+ * The production Ethereum proxy already exists. Never use this script to
+ * replace or upgrade it; use the reviewed upgrade proposal flow instead.
  */
 async function main() {
   const shopAddress = process.env.SHOP_ADDRESS;
@@ -42,7 +33,9 @@ async function main() {
 
   const [deployer] = await ethers.getSigners();
   const network = await ethers.provider.getNetwork();
-  const networkArg = network.chainId === 8453n ? "base" : "baseSepolia";
+  if (network.chainId !== 31337n) {
+    throw new Error("Refusing deployment: this script is restricted to local Hardhat chain 31337");
+  }
 
   console.log("────────────────────────────────────────────────────────");
   console.log("DigiPawns Escrow v2 — UUPS proxy deployment");
@@ -112,9 +105,7 @@ async function main() {
   console.log("\n📋 Next steps:");
   console.log("\n1. Add to Replit Secrets (use the PROXY address — never the impl):");
   console.log(`   VITE_ESCROW_ADDRESS=${proxyAddress}`);
-  console.log("\n2. Verify the implementation on Basescan:");
-  console.log(`   npx hardhat verify --network ${networkArg} ${implAddress}`);
-  console.log(`   Then mark the proxy as a proxy at: https://basescan.org/address/${proxyAddress}`);
+  console.log("\n2. This is a local-only deployment; do not publish it as production.");
   console.log("\n3. Set $DIG/$PC token tier config (in Remix or via script):");
   console.log(`   escrow.setTokenTierConfig(digTokenAddress, digThreshold, pcTokenAddress, pcThreshold)`);
   console.log("\n4. Configure rewards:");

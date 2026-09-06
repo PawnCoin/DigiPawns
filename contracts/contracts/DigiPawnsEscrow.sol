@@ -88,7 +88,7 @@ contract DigiPawnsEscrow is
     /// @notice $DIG ERC-20 contract address (set after deploy).
     address public digToken;
 
-    /// @notice $PC ERC-20 contract address on Ethereum/Base (set after deploy).
+    /// @notice $PC ERC-20 contract address on Ethereum (set after deploy).
     address public pcEthToken;
 
     /// @notice Minimum $DIG balance (in wei) required for GOLD tier.
